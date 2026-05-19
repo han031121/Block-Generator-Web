@@ -46,13 +46,15 @@ out/
 *.exe
 *.app
 
-# openFrameworks project outputs
+# blockGenerator build/runtime outputs
 blockGenerator/.vs/
+blockGenerator/bin/
 blockGenerator/obj/
 blockGenerator/dll/
-blockGenerator/bin/*
-!blockGenerator/bin/data/
-!blockGenerator/bin/data/**
+blockGenerator/output/
+blockGenerator/outputs/
+blockGenerator/temp/
+blockGenerator/tmp/
 
 # Emscripten / web compiler outputs
 *.wasm

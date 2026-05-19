@@ -27,15 +27,12 @@ void blockData::generateBlock() {
 		makeBlock();
 	}
 
-	status.setStatus(statusLevel::Info, "[ blockData ] Block generated.");
-
 	if (count > fail_count) {
 		init();
 		is_generated = false;
-		status.setStatus(statusLevel::Error, "[ blockData ] No more unique block configurations can be generated. Please generate new block data object.");
 	}
 	else if (count > 1) {
-		status.addStatusMessage("(duplication : " + std::to_string(count) + ")");
+        std::cout << "(duplication : " + std::to_string(count) + ")" << std::endl;
 	}
 }
 
@@ -93,7 +90,7 @@ void blockData::makeBlock() {
         double cur_weight = dis_weight(mt);
 
         if(weight_list.empty() || weight_sum <= EPSILON) {
-			status.setStatus(statusLevel::Warning, "[ blockData ] Cannot generate block anymore. Block generated");
+            std::cout << "[ blockData ] Cannot generate block anymore. Block generated" << std::endl;
 			is_generated = true;
             return;
         }

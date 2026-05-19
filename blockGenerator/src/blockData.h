@@ -1,7 +1,5 @@
 #pragma once
 
-#include "statusManager.h"
-
 #include <iostream>
 #include <algorithm>
 #include <vector>
@@ -66,15 +64,12 @@ private:
     void measureSize(Tuple t); //measure current size
 
 public:
-	statusManager status;
-
     blockData(int _bc1, int _bc2, int _max_r, int _max_c, int _max_h, double _den = 25, bool _dup = 0)
         : max_r(_max_r), max_c(_max_c), max_h(_max_h), density_var(_den), allow_duplicate(_dup) {
             block_count_pair = {std::min(_bc1, _bc2), std::max(_bc1, _bc2)};
                 
 			if (block_count_pair.first > max_r * max_c * max_h || block_count_pair.second > max_r * max_c * max_h || block_count_pair.first < 1 || block_count_pair.second < 1) {
-				status.setStatus(statusLevel::Warning, "[ blockData ] : Maximum block count is invalid. The value has been adjusted");
-
+				
 				if (block_count_pair.first > max_r * max_c * max_h)
 					block_count_pair.first = max_r * max_c * max_h;
 				if (block_count_pair.second > max_r * max_c * max_h)
@@ -85,11 +80,11 @@ public:
 					block_count_pair.second = 1;
 			}
 			if (_max_r > MAX_SIZE || _max_c > MAX_SIZE || _max_h > MAX_SIZE || _max_r < 1 || _max_c < 1 || _max_h < 1) {
-				status.setStatus(statusLevel::Error, "[ blockData ] : Max size value is invalid. Please initialize block data.");
+				std::cout << "[ blockData ] : Max size value is invalid. Please initialize block data." << std::endl;
 				max_r = 1; max_c = 1; max_h = 1;
 			}
 
-			status.setStatus(statusLevel::Info, "[ blockData ] : BlockData generated.");
+			std::cout << "[ blockData ] : BlockData generated." << std::endl;
             setWeight();
         }
 
