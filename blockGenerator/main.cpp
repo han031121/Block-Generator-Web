@@ -1,47 +1,24 @@
-#include "blockData.hpp"
+#include "blockJson.hpp"
 
-#include <memory>
+#include <exception>
+#include <iostream>
 
-int main()
+int main(int argc, char* argv[])
 {
-	// read json, set block data
-	int gen_count;
-	int bc1, bc2, maxr, maxc, maxh;
-	double den;
-	bool dup;
+	const std::string input_path = argc > 1 ? argv[1] : "test_input.json";
+	const std::string output_path = argc > 2 ? argv[2] : "test_output.json";
 
-	std::cout << "generate count : ";
-	std::cin >> gen_count;
-	std::cout << "block count 1 : ";
-	std::cin >> bc1;
-	std::cout << "block count 2 : ";
-	std::cin >> bc2;
-	std::cout << "max_r : ";
-	std::cin >> maxr;
-	std::cout << "max_c : ";
-	std::cin >> maxc;
-	std::cout << "max_h : ";
-	std::cin >> maxh;
-	std::cout << "density : ";
-	std::cin >> den;
-	std::cout << "allow duplicatate : ";
-	std::cin >> dup;
-
-	std::unique_ptr<blockData> block_data(new blockData(bc1, bc2, maxr, maxc, maxh, den, dup));
-
-	// print block data
-	std::cout << "hello." << std::endl;
-
-	while(1) {
-		bool input;
-		std::cout << "generate : ";
-		std::cin >> input;
-
-		if(!input)
-			break;
-		
-		block_data->generateBlock();
-		block_data->printBlockData();
+	try
+	{
+		GeneratorOptions options = readGeneratorOptions(input_path);
+		json output = generateBlocksToJson(options);
+		writeJsonFile(output_path, output);
+		std::cout << "Generated block data written to " << output_path << std::endl;
+	}
+	catch (const std::exception& e)
+	{
+		std::cerr << e.what() << std::endl;
+		return 1;
 	}
 
 	return 0;

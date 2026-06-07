@@ -264,7 +264,7 @@ void blockData::measureSize(Tuple added)
     size_h = biggest_h;
 }
 
-std::string blockData::getIdentify()
+std::string blockData::getIdentify() const
 {
     std::string s = "";
     char hex[] = "0123456789ABCDEF";

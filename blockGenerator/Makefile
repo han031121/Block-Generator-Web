@@ -1,13 +1,13 @@
 CXX := g++
 CXXFLAGS := -std=c++20 -Wall -Wextra
 TARGET := blockGenerator.exe
-SRCS := main.cpp blockData.cpp
+SRCS := main.cpp blockData.cpp blockJson.cpp
 
 .PHONY: all clean run
 
 all: $(TARGET)
 
-$(TARGET): $(SRCS) blockData.hpp
+$(TARGET): $(SRCS) blockData.hpp blockJson.hpp
 	$(CXX) $(CXXFLAGS) $(SRCS) -o $(TARGET)
 
 run: $(TARGET)
