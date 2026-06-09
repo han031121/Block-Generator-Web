@@ -11,6 +11,8 @@
 #include <string>
 #include <sstream>
 #include <iomanip>
+#include <fstream>
+#include <tuple>
 
 #define MAX_SIZE 13
 #define EPSILON 1e-12
@@ -104,7 +106,7 @@ public:
 	int getSizeRow() const { return size_r; }
 	int getSizeCol() const { return size_c; }
 	int getSizeHeight() const { return size_h; }
-	std::tuple<float, float, float> const getCenter()
+	std::tuple<float, float, float> getCenter() const
 	{
 		return std::make_tuple(
 			(float)(biggest_r + smallest_r) / 2,
@@ -115,6 +117,6 @@ public:
 	bool isGenerated() const { return is_generated; }
 
 	// utility
-	std::string getIdentify(); // get identity of current block pattern
+	std::string getIdentify() const; // get identity of current block pattern
 	void printBlockData();
 };
