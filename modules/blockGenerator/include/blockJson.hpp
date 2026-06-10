@@ -1,7 +1,7 @@
 #pragma once
 
 #include "blockData.hpp"
-#include "external/nlohmann/json.hpp"
+#include <nlohmann/json.hpp>
 
 #include <string>
 
