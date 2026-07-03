@@ -5,17 +5,24 @@ const {
     DEFAULT_BLOCK_JSON_PATH,
     loadBlockByIndex,
     parseBlockIndex
-} = require('../src/blockJson');
+} = require('../src/adapters/blockJson');
 
 test('loads a selected block and derives cube coordinates', async () => {
     const { block } = await loadBlockByIndex(DEFAULT_BLOCK_JSON_PATH, 0);
+    const expectedCubeCount = block.heightData
+        .flat()
+        .reduce((sum, height) => sum + height, 0);
 
     assert.equal(block.position, 0);
     assert.equal(block.index, 0);
     assert.equal(block.generated, true);
     assert.equal(block.cubes.length, block.blockCount);
-    assert.deepEqual(block.cubes[0], { r: 0, c: 0, h: 0 });
-    assert.ok(block.cubes.some((cube) => cube.r === 0 && cube.c === 2 && cube.h === 2));
+    assert.equal(block.cubes.length, expectedCubeCount);
+
+    for (const cube of block.cubes) {
+        assert.ok(cube.h >= 0);
+        assert.ok(cube.h < block.heightData[cube.r][cube.c]);
+    }
 });
 
 test('parses non-negative integer index text', () => {

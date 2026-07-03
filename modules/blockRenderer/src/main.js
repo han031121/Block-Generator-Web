@@ -5,12 +5,11 @@ const {
     DEFAULT_BLOCK_JSON_PATH,
     loadBlockByIndex,
     parseBlockIndex
-} = require('./blockJson');
+} = require('./adapters/blockJson');
 
 function isIndexLike(value) {
     return /^\d+$/.test(String(value ?? '').trim());
 }
-// cli 인자가 경로인지 인덱스인지 구분
 
 function parseArgs(argv) {
     if (argv.length === 0) {
@@ -32,7 +31,6 @@ function parseArgs(argv) {
         blockIndexText: argv[1] ?? null
     };
 }
-// 실행 인자 해석
 
 async function promptBlockIndex() {
     const rl = readline.createInterface({ input: stdin, output: stdout });
@@ -42,7 +40,6 @@ async function promptBlockIndex() {
         rl.close();
     }
 }
-// 블록 인덱스 입력 받음
 
 function printSelectedBlock(sourcePath, block) {
     console.log(`Loaded block json: ${sourcePath}`);
@@ -63,18 +60,10 @@ function printSelectedBlock(sourcePath, block) {
     }
 
     console.log('Height Data:');
-    for (let i = 0; i < block.heightData.length; i++) {
-        var str = ``;
-        for (let j = 0; j < block.heightData[i].length; j++) {
-            if(block.heightData[i][j] == 0)
-                str += `· `;
-            else 
-                str += block.heightData[i][j] + ' ';
-        }
-        console.log(`  ` + str);
+    for (const row of block.heightData) {
+        console.log(`  ${row.map((height) => height === 0 ? '.' : height).join(' ')}`);
     }
 }
-// 선택된 블록 정보 출력
 
 async function main() {
     const { blockJsonPath, blockIndexText } = parseArgs(process.argv.slice(2));

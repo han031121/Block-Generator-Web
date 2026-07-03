@@ -5,19 +5,18 @@ const DEFAULT_BLOCK_JSON_PATH = path.resolve(
     __dirname,
     '..',
     '..',
+    '..',
     'blockGenerator',
     'fixtures',
     'output',
     'test_output.json'
-); 
-// 블록 JSON의 기본 경로
+);
 
 function assertObject(value, name) {
     if (value === null || typeof value !== 'object' || Array.isArray(value)) {
         throw new Error(`${name} must be an object.`);
     }
 }
-// 값 검증
 
 function readInteger(value, name, min = Number.MIN_SAFE_INTEGER) {
     if (!Number.isInteger(value) || value < min) {
@@ -26,7 +25,6 @@ function readInteger(value, name, min = Number.MIN_SAFE_INTEGER) {
 
     return value;
 }
-// 변수 유효성 검증
 
 function readNumber(value, name) {
     if (typeof value !== 'number' || !Number.isFinite(value)) {
@@ -35,7 +33,6 @@ function readNumber(value, name) {
 
     return value;
 }
-// 숫자 크기 검증
 
 function parseBlockIndex(value) {
     const text = String(value).trim();
@@ -50,7 +47,6 @@ function parseBlockIndex(value) {
 
     return index;
 }
-// cli로 받은 값을 블록 인덱스로 변환
 
 function normalizePoint(value, name) {
     if (value === null) {
@@ -64,7 +60,6 @@ function normalizePoint(value, name) {
         h: readNumber(value.h, `${name}.h`)
     };
 }
-// 좌표 정규화
 
 function normalizeSize(value, name) {
     assertObject(value, name);
@@ -74,7 +69,6 @@ function normalizeSize(value, name) {
         h: readInteger(value.h, `${name}.h`, 0)
     };
 }
-// 크기 정보 정규화
 
 function normalizeHeightData(value, name) {
     if (!Array.isArray(value)) {
@@ -98,7 +92,6 @@ function normalizeHeightData(value, name) {
         );
     });
 }
-// 2차원 배열(height_data) 검증
 
 function buildCubes(heightData) {
     const cubes = [];
@@ -112,7 +105,6 @@ function buildCubes(heightData) {
 
     return cubes;
 }
-// 2차원 배열(height_data)을 좌표 목록으로 바꿈
 
 function maxHeight(heightData) {
     return heightData.reduce(
@@ -120,7 +112,6 @@ function maxHeight(heightData) {
         0
     );
 }
-// 최대 좌표 구하기
 
 function normalizeBlock(rawBlock, position) {
     const name = `blocks[${position}]`;
@@ -163,7 +154,6 @@ function normalizeBlock(rawBlock, position) {
         cubes
     };
 }
-// 블록 군집 하나 정규화
 
 async function readBlockJson(filePath = DEFAULT_BLOCK_JSON_PATH) {
     const sourcePath = path.resolve(filePath);
@@ -193,7 +183,6 @@ async function readBlockJson(filePath = DEFAULT_BLOCK_JSON_PATH) {
         blocks: data.blocks
     };
 }
-// JSON 파싱 -> {sourcePath, input, blocks}
 
 function selectBlock(blockJson, index) {
     const position = readInteger(index, 'block index', 0);
@@ -205,7 +194,6 @@ function selectBlock(blockJson, index) {
 
     return normalizeBlock(blockJson.blocks[position], position);
 }
-// 인덱스에 다라 블록 군집 선택, 정규화
 
 async function loadBlockByIndex(filePath, index) {
     const blockJson = await readBlockJson(filePath);
@@ -217,7 +205,6 @@ async function loadBlockByIndex(filePath, index) {
         block
     };
 }
-// 외부에서 사용하는 함수, JSON 읽고 블록 군집 선택
 
 module.exports = {
     DEFAULT_BLOCK_JSON_PATH,

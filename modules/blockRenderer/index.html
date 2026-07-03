@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>blockRenderer</title>
+    <style>
+        :root {
+            color-scheme: light;
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: #eef1f4;
+            color: #17202a;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+        }
+
+        button,
+        input {
+            font: inherit;
+        }
+
+        .app {
+            display: grid;
+            grid-template-columns: minmax(280px, 360px) 1fr;
+            min-height: 100vh;
+        }
+
+        .controls {
+            border-right: 1px solid #cfd6df;
+            background: #fbfcfd;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .brand {
+            margin: 0 0 18px;
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .control-group {
+            display: grid;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: grid;
+            gap: 6px;
+            color: #344252;
+            font-size: 13px;
+            font-weight: 650;
+        }
+
+        input[type="text"],
+        input[type="number"] {
+            width: 100%;
+            border: 1px solid #bec8d3;
+            border-radius: 6px;
+            padding: 9px 10px;
+            color: #17202a;
+            background: #ffffff;
+        }
+
+        input[type="range"] {
+            width: 100%;
+        }
+
+        .range-pair {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 76px;
+            align-items: center;
+            gap: 10px;
+        }
+
+        input[type="color"] {
+            width: 52px;
+            height: 36px;
+            border: 1px solid #bec8d3;
+            border-radius: 6px;
+            padding: 2px;
+            background: #ffffff;
+        }
+
+        .inline {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .inline input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+        }
+
+        .actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+
+        button {
+            min-height: 38px;
+            border: 1px solid #1f5e99;
+            border-radius: 6px;
+            background: #2468a6;
+            color: #ffffff;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        button.secondary {
+            border-color: #748394;
+            background: #ffffff;
+            color: #22303f;
+        }
+
+        .status {
+            min-height: 22px;
+            margin-bottom: 14px;
+            color: #536171;
+            font-size: 13px;
+        }
+
+        pre {
+            min-height: 92px;
+            margin: 0;
+            border: 1px solid #cfd6df;
+            border-radius: 6px;
+            padding: 10px;
+            overflow: auto;
+            background: #f5f7f9;
+            color: #17202a;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .stage {
+            display: grid;
+            place-items: center;
+            padding: 24px;
+            background: #e7ebef;
+        }
+
+        .canvas-wrap {
+            width: min(100%, 900px);
+            aspect-ratio: 1;
+            border: 1px solid #c3ccd7;
+            background: #f6f7f9;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        @media (max-width: 860px) {
+            .app {
+                grid-template-columns: 1fr;
+            }
+
+            .controls {
+                border-right: 0;
+                border-bottom: 1px solid #cfd6df;
+            }
+        }
+    </style>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "./node_modules/three/build/three.module.js",
+                "three/addons/": "./node_modules/three/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+    <main class="app">
+        <aside class="controls">
+            <h1 class="brand">blockRenderer</h1>
+
+            <div class="control-group">
+                <label>
+                    Block JSON
+                    <input id="filePath" type="text" value="../blockGenerator/fixtures/output/test_output.json">
+                </label>
+                <label>
+                    Block index
+                    <input id="blockIndex" type="number" value="0" min="0" step="1">
+                </label>
+            </div>
+
+            <div class="actions">
+                <button id="loadButton" type="button">Load</button>
+                <button id="downloadButton" class="secondary" type="button">JPG</button>
+            </div>
+
+            <div id="status" class="status"></div>
+
+            <div class="control-group">
+                <label>
+                    Block color
+                    <input id="blockColor" type="color" value="#c0aa81">
+                </label>
+                <label>
+                    Edge thickness
+                    <span class="range-pair">
+                        <input id="edgeThickness" type="range" min="1" max="12" step="1" value="4">
+                        <input id="edgeThicknessValue" type="number" min="1" max="12" step="1" value="4">
+                    </span>
+                </label>
+                <label>
+                    Camera distance
+                    <span class="range-pair">
+                        <input id="cameraDistance" type="range" min="6" max="32" step="0.5" value="12">
+                        <input id="cameraDistanceValue" type="number" min="6" max="32" step="0.5" value="12">
+                    </span>
+                </label>
+                <label>
+                    Camera rc angle
+                    <span class="range-pair">
+                        <input id="cameraAzimuthDeg" type="range" min="0" max="360" step="1" value="45">
+                        <input id="cameraAzimuthDegValue" type="number" min="0" max="360" step="1" value="45">
+                    </span>
+                </label>
+                <label>
+                    Camera h angle
+                    <span class="range-pair">
+                        <input id="cameraElevationDeg" type="range" min="1" max="89" step="1" value="25">
+                        <input id="cameraElevationDegValue" type="number" min="1" max="89" step="1" value="25">
+                    </span>
+                </label>
+            </div>
+
+            <div class="control-group">
+                <label class="inline">
+                    <input id="lightFollowsCamera" type="checkbox" checked>
+                    Light follows camera
+                </label>
+                <label>
+                    Light rc angle
+                    <span class="range-pair">
+                        <input id="lightAzimuthDeg" type="range" min="0" max="360" step="1" value="45">
+                        <input id="lightAzimuthDegValue" type="number" min="0" max="360" step="1" value="45">
+                    </span>
+                </label>
+                <label>
+                    Light h angle
+                    <span class="range-pair">
+                        <input id="lightElevationDeg" type="range" min="1" max="89" step="1" value="25">
+                        <input id="lightElevationDegValue" type="number" min="1" max="89" step="1" value="25">
+                    </span>
+                </label>
+                <label>
+                    Ambient light
+                    <span class="range-pair">
+                        <input id="ambientLightIntensity" type="range" min="0" max="2" step="0.05" value="0.25">
+                        <input id="ambientLightIntensityValue" type="number" min="0" max="2" step="0.05" value="0.25">
+                    </span>
+                </label>
+                <label>
+                    Directional light
+                    <span class="range-pair">
+                        <input id="directionalLightIntensity" type="range" min="0" max="8" step="0.1" value="4">
+                        <input id="directionalLightIntensityValue" type="number" min="0" max="8" step="0.1" value="4">
+                    </span>
+                </label>
+            </div>
+
+            <pre id="heightData"></pre>
+        </aside>
+
+        <section class="stage">
+            <div class="canvas-wrap">
+                <canvas id="renderCanvas" width="1200" height="1200"></canvas>
+            </div>
+        </section>
+    </main>
+
+    <script type="module" src="./src/testApp/renderApp.mjs"></script>
+</body>
+</html>
