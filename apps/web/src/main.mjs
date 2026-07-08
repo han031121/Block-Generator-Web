@@ -25,6 +25,7 @@ const startButton = document.querySelector('#startButton');
 const prevButton = document.querySelector('#prevButton');
 const nextButton = document.querySelector('#nextButton');
 const downloadButton = document.querySelector('#downloadButton');
+const resetRenderButton = document.querySelector('#resetRenderButton');
 const generatorControls = {
     generateCount: document.querySelector('#generateCount'),
     blockCountMin: document.querySelector('#blockCountMin'),
@@ -315,6 +316,31 @@ function updateLightPositionControlState() {
     }
 }
 
+function resetRenderOptions() {
+    controls.backgroundColor.value = DEFAULT_RENDER_OPTIONS.backgroundColor;
+    controls.blockColor.value = DEFAULT_RENDER_OPTIONS.blockColor;
+    controls.edgeColor.value = DEFAULT_RENDER_OPTIONS.edgeColor;
+    controls.lightFollowsCamera.checked = DEFAULT_RENDER_OPTIONS.lightFollowsCamera;
+
+    setControlPairValue('edgeThickness', DEFAULT_RENDER_OPTIONS.edgeThickness);
+    setControlPairValue('cameraDistance', DEFAULT_RENDER_OPTIONS.cameraDistance);
+    setControlPairValue('cameraAzimuthDeg', DEFAULT_RENDER_OPTIONS.cameraAzimuthDeg);
+    setControlPairValue('cameraElevationDeg', DEFAULT_RENDER_OPTIONS.cameraElevationDeg);
+    setControlPairValue(
+        'ambientLightIntensity',
+        DEFAULT_RENDER_OPTIONS.ambientLightIntensity
+    );
+    setControlPairValue(
+        'directionalLightIntensity',
+        DEFAULT_RENDER_OPTIONS.directionalLightIntensity
+    );
+    setControlPairValue('lightAzimuthDeg', DEFAULT_RENDER_OPTIONS.lightAzimuthDeg);
+    setControlPairValue('lightElevationDeg', DEFAULT_RENDER_OPTIONS.lightElevationDeg);
+
+    updateLightPositionControlState();
+    renderActiveBlock();
+}
+
 function updateHeightData(block) {
     heightDataOutput.textContent = block.heightData
         .map((row) => row.map((height) => height === 0 ? '.' : height).join(' '))
@@ -440,6 +466,7 @@ function bindGeneratorEvents() {
 }
 
 function bindRenderEvents() {
+    resetRenderButton.addEventListener('click', resetRenderOptions);
     controls.backgroundColor.addEventListener('input', renderActiveBlock);
     controls.blockColor.addEventListener('input', renderActiveBlock);
     controls.edgeColor.addEventListener('input', renderActiveBlock);
@@ -491,13 +518,13 @@ function bindKeyboardShortcuts() {
             return;
         }
 
-        if (event.key === 'ArrowLeft' && !hasShortcutModifier(event)) {
+        if (event.key === ',' && !hasShortcutModifier(event)) {
             event.preventDefault();
             moveBlock(-1);
             return;
         }
 
-        if (event.key === 'ArrowRight' && !hasShortcutModifier(event)) {
+        if (event.key === '.' && !hasShortcutModifier(event)) {
             event.preventDefault();
             moveBlock(1);
             return;
@@ -545,7 +572,7 @@ function bindCanvasInteractionEvents() {
         const deltaX = event.clientX - cameraDragState.startX;
         const deltaY = event.clientY - cameraDragState.startY;
         setCameraAngleValues(
-            cameraDragState.startAzimuthDeg + deltaX * CAMERA_DRAG_SENSITIVITY_DEG,
+            cameraDragState.startAzimuthDeg - deltaX * CAMERA_DRAG_SENSITIVITY_DEG,
             cameraDragState.startElevationDeg + deltaY * CAMERA_DRAG_SENSITIVITY_DEG
         );
         renderActiveBlock();

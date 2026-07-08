@@ -9,8 +9,14 @@ import {
     mergeRenderOptions
 } from './renderConfig.mjs';
 
+const MIN_AUTO_FIT_CLUSTER_SIZE = 3;
+
 function degreesToRadians(degrees) {
     return degrees * Math.PI / 180;
+}
+
+function getMinimumAutoFitBaseSize(fitScale) {
+    return Math.sqrt(3) * MIN_AUTO_FIT_CLUSTER_SIZE * fitScale;
 }
 
 function offsetFromAngles(distance, azimuthDeg, elevationDeg) {
@@ -19,9 +25,9 @@ function offsetFromAngles(distance, azimuthDeg, elevationDeg) {
     const horizontalDistance = distance * Math.cos(elevation);
 
     return new THREE.Vector3(
-        horizontalDistance * Math.cos(azimuth),
+        horizontalDistance * Math.sin(azimuth),
         distance * Math.sin(elevation),
-        horizontalDistance * Math.sin(azimuth)
+        horizontalDistance * Math.cos(azimuth)
     );
 }
 
@@ -277,7 +283,9 @@ export class ThreeBlockRenderer {
         const sphere = bounds.isEmpty()
             ? new THREE.Sphere(target, 1)
             : bounds.getBoundingSphere(new THREE.Sphere());
-        const baseSize = Math.max(sphere.radius * 2 * this.options.fitScale, 1);
+        const fittedBaseSize = sphere.radius * 2 * this.options.fitScale;
+        const minimumBaseSize = getMinimumAutoFitBaseSize(this.options.fitScale);
+        const baseSize = Math.max(fittedBaseSize, minimumBaseSize, 1);
         const distanceScale = this.options.cameraDistance /
             DEFAULT_RENDER_OPTIONS.cameraDistance;
         const viewSize = Math.max(baseSize * distanceScale, 1);
