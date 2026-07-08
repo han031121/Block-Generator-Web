@@ -57,6 +57,7 @@ blockGenerator/temp/
 blockGenerator/tmp/
 
 # Emscripten / web compiler outputs
+apps/web/public/generated/
 *.wasm
 *.wasm.map
 *.worker.js

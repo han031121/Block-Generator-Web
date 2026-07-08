@@ -3,14 +3,14 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
-const { chromium } = require('playwright-core');
+const { chromium } = require('../../../modules/blockRenderer/node_modules/playwright-core');
 
 const { startServer } = require('../src/server');
 
 const EDGE_PATH = process.env.PLAYWRIGHT_EDGE_PATH ??
     'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
 
-test('renders a nonblank Three.js canvas and exposes JPG data', {
+test('runs the web generation flow and renders a nonblank Three.js canvas', {
     skip: fs.existsSync(EDGE_PATH) ? false : `Edge executable not found: ${EDGE_PATH}`
 }, async (t) => {
     const { server, port } = await startServer(5193);
@@ -24,11 +24,23 @@ test('renders a nonblank Three.js canvas and exposes JPG data', {
 
     const page = await browser.newPage({ viewport: { width: 1280, height: 920 } });
     await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: 'networkidle' });
+    await page.click('#startButton');
     await page.waitForFunction(
-        () => document.querySelector('#status')?.textContent.includes('cubes'),
+        () => document.querySelector('#status')?.textContent.includes('Generated'),
         null,
-        { timeout: 10000 }
+        { timeout: 30000 }
     );
+
+    let blockPositionText = await page.textContent('#blockPosition');
+    assert.equal(blockPositionText, '1 / 300');
+
+    await page.click('#nextButton');
+    blockPositionText = await page.textContent('#blockPosition');
+    assert.equal(blockPositionText, '2 / 300');
+
+    await page.click('#prevButton');
+    blockPositionText = await page.textContent('#blockPosition');
+    assert.equal(blockPositionText, '1 / 300');
 
     let lightPositionState = await page.evaluate(() => ({
         followsCamera: document.querySelector('#lightFollowsCamera').checked,
@@ -109,7 +121,7 @@ test('renders a nonblank Three.js canvas and exposes JPG data', {
     });
 
     await page.screenshot({
-        path: path.join(os.tmpdir(), 'block-renderer-smoke.png'),
+        path: path.join(os.tmpdir(), 'block-generator-web-smoke.png'),
         fullPage: true
     });
 

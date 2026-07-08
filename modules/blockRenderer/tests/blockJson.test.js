@@ -1,14 +1,54 @@
 const assert = require('node:assert/strict');
+const fs = require('node:fs/promises');
+const os = require('node:os');
+const path = require('node:path');
 const test = require('node:test');
 
 const {
-    DEFAULT_BLOCK_JSON_PATH,
     loadBlockByIndex,
     parseBlockIndex
 } = require('../src/adapters/blockJson');
 
-test('loads a selected block and derives cube coordinates', async () => {
-    const { block } = await loadBlockByIndex(DEFAULT_BLOCK_JSON_PATH, 0);
+const SAMPLE_BLOCK_JSON = {
+    input: {
+        generate_count: 1,
+        block_count_min: 3,
+        block_count_max: 3,
+        max_r: 2,
+        max_c: 2,
+        max_h: 2,
+        density: 0,
+        allow_duplicate: false
+    },
+    blocks: [
+        {
+            index: 0,
+            generated: true,
+            block_count: 3,
+            size: { r: 1, c: 2, h: 2 },
+            height_data: [
+                [1, 2],
+                [0, 0]
+            ],
+            identify: '12_12',
+            center: { r: 0, c: 0.5, h: 0.5 }
+        }
+    ]
+};
+
+async function writeSampleBlockJson(t) {
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'block-json-test-'));
+    const filePath = path.join(directory, 'blocks.json');
+
+    await fs.writeFile(filePath, JSON.stringify(SAMPLE_BLOCK_JSON), 'utf8');
+    t.after(() => fs.rm(directory, { recursive: true, force: true }));
+
+    return filePath;
+}
+
+test('loads a selected block and derives cube coordinates', async (t) => {
+    const filePath = await writeSampleBlockJson(t);
+    const { block } = await loadBlockByIndex(filePath, 0);
     const expectedCubeCount = block.heightData
         .flat()
         .reduce((sum, height) => sum + height, 0);
@@ -35,9 +75,11 @@ test('rejects invalid index text', () => {
     assert.throws(() => parseBlockIndex('1.5'), /non-negative integer/);
 });
 
-test('rejects out-of-range block index', async () => {
+test('rejects out-of-range block index', async (t) => {
+    const filePath = await writeSampleBlockJson(t);
+
     await assert.rejects(
-        () => loadBlockByIndex(DEFAULT_BLOCK_JSON_PATH, 99999),
+        () => loadBlockByIndex(filePath, 99999),
         /out of range/
     );
 });

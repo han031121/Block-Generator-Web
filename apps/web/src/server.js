@@ -3,14 +3,13 @@ const http = require('node:http');
 const path = require('node:path');
 const { URL } = require('node:url');
 
-const {
-    DEFAULT_BLOCK_JSON_PATH,
-    loadBlockByIndex,
-    parseBlockIndex
-} = require('./adapters/blockJson');
-
-const MODULE_ROOT = path.resolve(__dirname, '..');
-const WORKSPACE_ROOT = path.resolve(MODULE_ROOT, '..', '..');
+const APP_ROOT = path.resolve(__dirname, '..');
+const WORKSPACE_ROOT = path.resolve(APP_ROOT, '..', '..');
+const PUBLIC_ROOT = path.resolve(APP_ROOT, 'public');
+const SRC_ROOT = path.resolve(APP_ROOT, 'src');
+const BLOCK_RENDERER_ROOT = path.resolve(WORKSPACE_ROOT, 'modules', 'blockRenderer');
+const BLOCK_RENDERER_CORE_ROOT = path.resolve(BLOCK_RENDERER_ROOT, 'src', 'core');
+const THREE_ROOT = path.resolve(BLOCK_RENDERER_ROOT, 'node_modules', 'three');
 const DEFAULT_PORT = 5173;
 
 const MIME_TYPES = {
@@ -30,45 +29,50 @@ function isInside(parentPath, childPath) {
         (!relativePath.startsWith('..') && !path.isAbsolute(relativePath));
 }
 
-function resolveStaticPath(pathname) {
-    const cleanPathname = pathname === '/' ? '/index.html' : pathname;
-    const decodedPath = decodeURIComponent(cleanPathname);
-    const resolvedPath = path.resolve(MODULE_ROOT, `.${decodedPath}`);
+function resolveInside(rootPath, relativePath) {
+    const resolvedPath = path.resolve(rootPath, relativePath);
 
-    if (!isInside(MODULE_ROOT, resolvedPath)) {
-        throw new Error('Static path is outside of the module root.');
+    if (!isInside(rootPath, resolvedPath)) {
+        throw new Error('Static path is outside of the allowed root.');
     }
 
     return resolvedPath;
 }
 
-function resolveBlockJsonPath(fileParam) {
-    if (!fileParam) {
-        return DEFAULT_BLOCK_JSON_PATH;
+function stripRoutePrefix(pathname, prefix) {
+    return decodeURIComponent(pathname.slice(prefix.length));
+}
+
+function resolveStaticPath(pathname) {
+    if (pathname === '/') {
+        return path.resolve(PUBLIC_ROOT, 'index.html');
     }
 
-    const resolvedPath = path.isAbsolute(fileParam)
-        ? path.resolve(fileParam)
-        : path.resolve(MODULE_ROOT, fileParam);
-
-    if (!isInside(WORKSPACE_ROOT, resolvedPath)) {
-        throw new Error('Block JSON path is outside of the workspace.');
+    if (pathname.startsWith('/src/')) {
+        return resolveInside(SRC_ROOT, stripRoutePrefix(pathname, '/src/'));
     }
 
-    return resolvedPath;
+    if (pathname.startsWith('/generated/')) {
+        return resolveInside(PUBLIC_ROOT, decodeURIComponent(pathname.slice(1)));
+    }
+
+    if (pathname.startsWith('/modules/blockRenderer/src/core/')) {
+        return resolveInside(
+            BLOCK_RENDERER_CORE_ROOT,
+            stripRoutePrefix(pathname, '/modules/blockRenderer/src/core/')
+        );
+    }
+
+    if (pathname.startsWith('/vendor/three/')) {
+        return resolveInside(THREE_ROOT, stripRoutePrefix(pathname, '/vendor/three/'));
+    }
+
+    return resolveInside(PUBLIC_ROOT, decodeURIComponent(pathname.slice(1)));
 }
 
 function sendJson(response, statusCode, data) {
     response.writeHead(statusCode, { 'Content-Type': MIME_TYPES['.json'] });
     response.end(JSON.stringify(data, null, 2));
-}
-
-async function handleBlockApi(requestUrl, response) {
-    const index = parseBlockIndex(requestUrl.searchParams.get('index') ?? '0');
-    const blockJsonPath = resolveBlockJsonPath(requestUrl.searchParams.get('file'));
-    const result = await loadBlockByIndex(blockJsonPath, index);
-
-    sendJson(response, 200, result);
 }
 
 async function serveStatic(requestUrl, response) {
@@ -85,12 +89,6 @@ function createServer() {
     return http.createServer(async (request, response) => {
         try {
             const requestUrl = new URL(request.url, 'http://localhost');
-
-            if (requestUrl.pathname === '/api/block') {
-                await handleBlockApi(requestUrl, response);
-                return;
-            }
-
             await serveStatic(requestUrl, response);
         } catch (error) {
             if (error.code === 'ENOENT') {
@@ -134,7 +132,7 @@ async function startServer(preferredPort = DEFAULT_PORT) {
 
         try {
             await listen(server, port);
-            console.log(`blockRenderer server: http://127.0.0.1:${port}/`);
+            console.log(`web app server: http://127.0.0.1:${port}/`);
             return { server, port };
         } catch (error) {
             lastError = error;
@@ -157,7 +155,6 @@ if (require.main === module) {
 
 module.exports = {
     createServer,
-    resolveBlockJsonPath,
     resolveStaticPath,
     startServer
 };

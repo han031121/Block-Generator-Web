@@ -1,34 +1,31 @@
 # blockRenderer
 
-Three.js-based block renderer for generated block JSON data.
+Reusable Three.js renderer code for generated block JSON data.
 
 ## Structure
 
 ```text
 src/core/
-  Reusable renderer code. It receives block data and render options, then renders
-  to a canvas.
+  Browser-compatible renderer code. It receives normalized block data and render
+  options, then renders to a canvas.
 
 src/adapters/
-  Data adapters for external formats. The current adapter reads blockGenerator
-  JSON output and normalizes selected block data.
+  Node-side data adapters for loading blockGenerator JSON output.
 
-src/testApp/
-  Browser UI used to inspect and tune renderer behavior during development.
+src/main.js
+  Console loader for inspecting a selected block from a JSON file.
 ```
 
-## Usage
+The interactive web UI lives in:
 
-```powershell
-npm start
+```text
+apps/web/
 ```
-
-Open the printed local URL in a browser.
 
 ## Console Loader
 
 ```powershell
-npm run cli
+npm.cmd run cli
 ```
 
 Optional arguments:
@@ -37,10 +34,8 @@ Optional arguments:
 node src/main.js [blockJsonPath] [blockIndex]
 ```
 
-If no JSON path is provided, the renderer reads:
+If no JSON path is provided, the loader reads:
 
 ```text
 ../blockGenerator/fixtures/output/test_output.json
 ```
-
-The browser renderer outputs a 1200 x 1200 canvas and can download the result as a JPG.

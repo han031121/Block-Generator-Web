@@ -46,11 +46,11 @@ private:
 	bool is_generated = false;
 
 	// weight
-	double weight_field[MAX_SIZE][MAX_SIZE][MAX_SIZE + 1] = {0};
+    double weight_field[MAX_SIZE][MAX_SIZE][MAX_SIZE + 1] = {};
 
 	// data
-	bool cubic_data[MAX_SIZE][MAX_SIZE][MAX_SIZE + 1] = {0};
-	int height_data[MAX_SIZE][MAX_SIZE] = {0};
+    bool cubic_data[MAX_SIZE][MAX_SIZE][MAX_SIZE + 1] = {};
+    int height_data[MAX_SIZE][MAX_SIZE] = {};
 
 	// block generate
 	void makeBlock();
