@@ -24,6 +24,62 @@ test('runs the web generation flow and renders a nonblank Three.js canvas', {
 
     const page = await browser.newPage({ viewport: { width: 1280, height: 920 } });
     await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: 'networkidle' });
+
+    const readLayoutState = async () => page.evaluate(() => {
+        const canvasRect = document.querySelector('.canvas-wrap').getBoundingClientRect();
+        const scrollElement = document.scrollingElement;
+
+        return {
+            pageScrollsVertically: scrollElement.scrollHeight > scrollElement.clientHeight,
+            settingsOverflowY: getComputedStyle(
+                document.querySelector('.settings-scroll')
+            ).overflowY,
+            panelAriaHidden: document.querySelector('#settingsPanel')
+                .getAttribute('aria-hidden'),
+            openButtonHidden: document.querySelector('#settingsOpenButton').hidden,
+            canvasInsideViewport: canvasRect.left >= 0 &&
+                canvasRect.top >= 0 &&
+                canvasRect.right <= window.innerWidth + 1 &&
+                canvasRect.bottom <= window.innerHeight + 1,
+            canvasWidth: canvasRect.width,
+            canvasHeight: canvasRect.height
+        };
+    });
+
+    let layoutState = await readLayoutState();
+    assert.equal(layoutState.pageScrollsVertically, false);
+    assert.equal(layoutState.settingsOverflowY, 'auto');
+    assert.equal(layoutState.panelAriaHidden, 'false');
+    assert.equal(layoutState.openButtonHidden, true);
+    assert.equal(layoutState.canvasInsideViewport, true);
+    assert.equal(layoutState.canvasWidth, layoutState.canvasHeight);
+
+    const iconButtonState = await page.evaluate(() => {
+        const closeRect = document.querySelector('#settingsCloseButton')
+            .getBoundingClientRect();
+        const prevRect = document.querySelector('#prevButton').getBoundingClientRect();
+        const nextRect = document.querySelector('#nextButton').getBoundingClientRect();
+
+        return {
+            closeText: document.querySelector('#settingsCloseButton').innerText.trim(),
+            prevText: document.querySelector('#prevButton').innerText.trim(),
+            nextText: document.querySelector('#nextButton').innerText.trim(),
+            closeWidth: closeRect.width,
+            closeHeight: closeRect.height,
+            prevWidth: prevRect.width,
+            prevHeight: prevRect.height,
+            nextWidth: nextRect.width,
+            nextHeight: nextRect.height
+        };
+    });
+    assert.equal(iconButtonState.closeText, '');
+    assert.equal(iconButtonState.prevText, '');
+    assert.equal(iconButtonState.nextText, '');
+    assert.ok(iconButtonState.closeWidth <= 34);
+    assert.equal(iconButtonState.closeWidth, iconButtonState.closeHeight);
+    assert.equal(iconButtonState.prevWidth, iconButtonState.prevHeight);
+    assert.equal(iconButtonState.nextWidth, iconButtonState.nextHeight);
+
     await page.click('#startButton');
     await page.waitForFunction(
         () => document.querySelector('#status')?.textContent.includes('Generated'),
@@ -42,6 +98,70 @@ test('runs the web generation flow and renders a nonblank Three.js canvas', {
     blockPositionText = await page.textContent('#blockPosition');
     assert.equal(blockPositionText, '1 / 300');
 
+    await page.locator('#renderCanvas').evaluate((canvas) => canvas.focus());
+    await page.keyboard.press('ArrowRight');
+    blockPositionText = await page.textContent('#blockPosition');
+    assert.equal(blockPositionText, '2 / 300');
+
+    await page.keyboard.press('ArrowLeft');
+    blockPositionText = await page.textContent('#blockPosition');
+    assert.equal(blockPositionText, '1 / 300');
+
+    await page.fill('#generateCount', '2');
+    await page.locator('#renderCanvas').evaluate((canvas) => canvas.focus());
+    await page.keyboard.press('g');
+    await page.waitForFunction(
+        () => document.querySelector('#blockPosition')?.textContent === '1 / 2',
+        null,
+        { timeout: 30000 }
+    );
+    blockPositionText = await page.textContent('#blockPosition');
+    assert.equal(blockPositionText, '1 / 2');
+
+    await page.click('#settingsCloseButton');
+    layoutState = await readLayoutState();
+    assert.equal(layoutState.pageScrollsVertically, false);
+    assert.equal(layoutState.panelAriaHidden, 'true');
+    assert.equal(layoutState.openButtonHidden, false);
+    assert.equal(layoutState.canvasInsideViewport, true);
+
+    await page.click('#settingsOpenButton');
+    layoutState = await readLayoutState();
+    assert.equal(layoutState.panelAriaHidden, 'false');
+    assert.equal(layoutState.openButtonHidden, true);
+    assert.equal(layoutState.canvasInsideViewport, true);
+
+    let tabState = await page.evaluate(() => ({
+        generationSelected: document.querySelector('#generationTab')
+            .getAttribute('aria-selected'),
+        renderingSelected: document.querySelector('#renderingTab')
+            .getAttribute('aria-selected'),
+        generationHidden: document.querySelector('#generationPanel').hidden,
+        renderingHidden: document.querySelector('#renderingPanel').hidden
+    }));
+    assert.deepEqual(tabState, {
+        generationSelected: 'true',
+        renderingSelected: 'false',
+        generationHidden: false,
+        renderingHidden: true
+    });
+
+    await page.click('#renderingTab');
+    tabState = await page.evaluate(() => ({
+        generationSelected: document.querySelector('#generationTab')
+            .getAttribute('aria-selected'),
+        renderingSelected: document.querySelector('#renderingTab')
+            .getAttribute('aria-selected'),
+        generationHidden: document.querySelector('#generationPanel').hidden,
+        renderingHidden: document.querySelector('#renderingPanel').hidden
+    }));
+    assert.deepEqual(tabState, {
+        generationSelected: 'false',
+        renderingSelected: 'true',
+        generationHidden: true,
+        renderingHidden: false
+    });
+
     let lightPositionState = await page.evaluate(() => ({
         followsCamera: document.querySelector('#lightFollowsCamera').checked,
         lightAzimuthDisabled: document.querySelector('#lightAzimuthDeg').disabled,
@@ -53,17 +173,13 @@ test('runs the web generation flow and renders a nonblank Three.js canvas', {
         lightAzimuth: document.querySelector('#lightAzimuthDeg').value,
         lightElevation: document.querySelector('#lightElevationDeg').value
     }));
-    assert.deepEqual(lightPositionState, {
-        followsCamera: true,
-        lightAzimuthDisabled: true,
-        lightAzimuthValueDisabled: true,
-        lightElevationDisabled: true,
-        lightElevationValueDisabled: true,
-        cameraAzimuth: '45',
-        cameraElevation: '25',
-        lightAzimuth: '45',
-        lightElevation: '25'
-    });
+    assert.equal(lightPositionState.followsCamera, true);
+    assert.equal(lightPositionState.lightAzimuthDisabled, true);
+    assert.equal(lightPositionState.lightAzimuthValueDisabled, true);
+    assert.equal(lightPositionState.lightElevationDisabled, true);
+    assert.equal(lightPositionState.lightElevationValueDisabled, true);
+    assert.equal(lightPositionState.lightAzimuth, lightPositionState.cameraAzimuth);
+    assert.equal(lightPositionState.lightElevation, lightPositionState.cameraElevation);
 
     await page.fill('#edgeThicknessValue', '8');
     let syncedValues = await page.evaluate(() => ({
@@ -105,6 +221,52 @@ test('runs the web generation flow and renders a nonblank Three.js canvas', {
         lightAzimuth: '90',
         lightAzimuthValue: '90'
     });
+
+    const cameraElevationBeforeDrag = await page.evaluate(() =>
+        Number(document.querySelector('#cameraElevationDeg').value)
+    );
+
+    const canvasBox = await page.locator('#renderCanvas').boundingBox();
+    assert.ok(canvasBox);
+
+    await page.mouse.move(
+        canvasBox.x + canvasBox.width / 2,
+        canvasBox.y + canvasBox.height / 2
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+        canvasBox.x + canvasBox.width / 2 + 40,
+        canvasBox.y + canvasBox.height / 2 - 20
+    );
+    await page.mouse.up();
+
+    lightPositionState = await page.evaluate(() => ({
+        cameraAzimuth: Number(document.querySelector('#cameraAzimuthDeg').value),
+        cameraAzimuthValue: Number(document.querySelector('#cameraAzimuthDegValue').value),
+        cameraElevation: Number(document.querySelector('#cameraElevationDeg').value),
+        cameraElevationValue: Number(document.querySelector('#cameraElevationDegValue').value),
+        lightAzimuth: Number(document.querySelector('#lightAzimuthDeg').value),
+        lightAzimuthValue: Number(document.querySelector('#lightAzimuthDegValue').value),
+        lightElevation: Number(document.querySelector('#lightElevationDeg').value),
+        lightElevationValue: Number(document.querySelector('#lightElevationDegValue').value)
+    }));
+    assert.deepEqual(lightPositionState, {
+        cameraAzimuth: 104,
+        cameraAzimuthValue: 104,
+        cameraElevation: cameraElevationBeforeDrag + 7,
+        cameraElevationValue: cameraElevationBeforeDrag + 7,
+        lightAzimuth: 104,
+        lightAzimuthValue: 104,
+        lightElevation: cameraElevationBeforeDrag + 7,
+        lightElevationValue: cameraElevationBeforeDrag + 7
+    });
+
+    await page.mouse.wheel(0, -100);
+    syncedValues = await page.evaluate(() => ({
+        range: document.querySelector('#cameraDistance').value,
+        number: document.querySelector('#cameraDistanceValue').value
+    }));
+    assert.deepEqual(syncedValues, { range: '15.5', number: '15.5' });
 
     await page.uncheck('#lightFollowsCamera');
     lightPositionState = await page.evaluate(() => ({
@@ -175,9 +337,53 @@ test('runs the web generation flow and renders a nonblank Three.js canvas', {
     assert.ok(metrics.darkPixels > 50);
     assert.equal(metrics.hasJpgDataUrl, true);
 
+    await page.evaluate(() => {
+        const originalClick = HTMLAnchorElement.prototype.click;
+        window.__downloadClicks = [];
+        window.__restoreAnchorClick = () => {
+            HTMLAnchorElement.prototype.click = originalClick;
+        };
+        HTMLAnchorElement.prototype.click = function click() {
+            window.__downloadClicks.push({
+                download: this.download,
+                href: this.href
+            });
+        };
+    });
+    await page.locator('#renderCanvas').evaluate((canvas) => canvas.focus());
+    await page.keyboard.press('s');
+    const downloadClicks = await page.evaluate(() => window.__downloadClicks);
+    assert.equal(downloadClicks.length, 1);
+    assert.match(downloadClicks[0].download, /^block-\d+\.jpg$/);
+    assert.ok(downloadClicks[0].href.startsWith('data:image/jpeg;base64,'));
+    await page.evaluate(() => window.__restoreAnchorClick());
+
     const litAverageLuminance = metrics.averageLuminance;
     await page.fill('#ambientLightIntensityValue', '0');
     await page.fill('#directionalLightIntensityValue', '0');
     metrics = await readCanvasMetrics();
     assert.ok(litAverageLuminance > metrics.averageLuminance + 20);
+
+    await page.setViewportSize({ width: 390, height: 760 });
+    layoutState = await readLayoutState();
+    assert.equal(layoutState.pageScrollsVertically, false);
+    assert.equal(layoutState.canvasInsideViewport, true);
+    assert.equal(layoutState.canvasWidth, layoutState.canvasHeight);
+
+    await page.click('#settingsCloseButton');
+    layoutState = await readLayoutState();
+    assert.equal(layoutState.panelAriaHidden, 'true');
+    assert.equal(layoutState.openButtonHidden, false);
+    assert.equal(layoutState.canvasInsideViewport, true);
+
+    await page.screenshot({
+        path: path.join(os.tmpdir(), 'block-generator-web-mobile-smoke.png'),
+        fullPage: true
+    });
+
+    metrics = await readCanvasMetrics();
+    assert.equal(metrics.width, 1200);
+    assert.equal(metrics.height, 1200);
+    assert.ok(metrics.nonBackgroundPixels > 1000);
+    assert.equal(metrics.hasJpgDataUrl, true);
 });

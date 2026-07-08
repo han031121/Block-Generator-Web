@@ -16,156 +16,252 @@
 </head>
 <body>
     <main class="app">
-        <aside class="controls">
-            <div class="header">
-                <h1 class="brand">Block Generator</h1>
-                <div id="status" class="status" role="status">Ready</div>
+        <button
+            id="settingsOpenButton"
+            class="settings-open-button"
+            type="button"
+            aria-controls="settingsPanel"
+            aria-expanded="false"
+            hidden
+        >
+            Settings
+        </button>
+
+        <aside id="settingsPanel" class="settings-panel" aria-label="Settings">
+            <div class="settings-topbar">
+                <div class="header">
+                    <h1 class="brand">Block Generator</h1>
+                    <div id="status" class="status" role="status">Ready</div>
+                </div>
+                <button
+                    id="settingsCloseButton"
+                    class="settings-close-button icon-button secondary"
+                    type="button"
+                    aria-label="Hide settings"
+                    aria-controls="settingsPanel"
+                    aria-expanded="true"
+                >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M6 6L18 18M18 6L6 18"></path>
+                    </svg>
+                </button>
             </div>
 
-            <form id="generatorForm" class="control-group">
-                <h2 class="group-title">Generation</h2>
-                <label>
-                    Generate count
-                    <input id="generateCount" type="number" value="300" min="1" max="2000" step="1">
-                </label>
-                <div class="number-grid">
-                    <label>
-                        Block count min
-                        <input id="blockCountMin" type="number" value="5" min="1" max="2197" step="1">
-                    </label>
-                    <label>
-                        Block count max
-                        <input id="blockCountMax" type="number" value="15" min="1" max="2197" step="1">
-                    </label>
-                </div>
-                <div class="dimension-grid">
-                    <label>
-                        Rows
-                        <input id="maxRows" type="number" value="4" min="1" max="13" step="1">
-                    </label>
-                    <label>
-                        Columns
-                        <input id="maxCols" type="number" value="4" min="1" max="13" step="1">
-                    </label>
-                    <label>
-                        Height
-                        <input id="maxHeight" type="number" value="5" min="1" max="13" step="1">
-                    </label>
-                </div>
-                <label>
-                    Density
-                    <span class="range-pair">
-                        <input id="density" type="range" min="0" max="100" step="1" value="0">
-                        <input id="densityValue" type="number" min="0" max="100" step="1" value="0">
-                    </span>
-                </label>
-                <label class="inline">
-                    <input id="allowDuplicate" type="checkbox">
-                    Allow duplicates
-                </label>
-                <div class="actions">
-                    <button id="startButton" type="submit">Start</button>
-                    <button id="downloadButton" class="secondary" type="button" disabled>JPG</button>
-                </div>
-            </form>
-
-            <div class="control-group">
-                <h2 class="group-title">Blocks</h2>
-                <div class="navigation">
-                    <button id="prevButton" class="secondary" type="button" disabled>&lt;</button>
-                    <div id="blockPosition" class="block-position">0 / 0</div>
-                    <button id="nextButton" class="secondary" type="button" disabled>&gt;</button>
-                </div>
-                <div id="blockMeta" class="block-meta"></div>
-                <pre id="heightData"></pre>
+            <div class="settings-tabs" role="tablist" aria-label="Settings sections">
+                <button
+                    id="generationTab"
+                    class="tab-button is-active"
+                    type="button"
+                    role="tab"
+                    aria-selected="true"
+                    aria-controls="generationPanel"
+                    data-tab-target="generation"
+                >
+                    Generation
+                </button>
+                <button
+                    id="renderingTab"
+                    class="tab-button"
+                    type="button"
+                    role="tab"
+                    aria-selected="false"
+                    aria-controls="renderingPanel"
+                    data-tab-target="rendering"
+                    tabindex="-1"
+                >
+                    Rendering
+                </button>
             </div>
 
-            <div class="control-group">
-                <h2 class="group-title">Render</h2>
-                <div class="number-grid">
-                    <label>
-                        Background
-                        <input id="backgroundColor" type="color" value="#f6f7f9">
-                    </label>
-                    <label>
-                        Block color
-                        <input id="blockColor" type="color" value="#c0aa81">
-                    </label>
-                </div>
-                <label>
-                    Edge color
-                    <input id="edgeColor" type="color" value="#000000">
-                </label>
-                <label>
-                    Edge thickness
-                    <span class="range-pair">
-                        <input id="edgeThickness" type="range" min="1" max="12" step="1" value="4">
-                        <input id="edgeThicknessValue" type="number" min="1" max="12" step="1" value="4">
-                    </span>
-                </label>
-                <label>
-                    Camera distance
-                    <span class="range-pair">
-                        <input id="cameraDistance" type="range" min="6" max="32" step="0.5" value="12">
-                        <input id="cameraDistanceValue" type="number" min="6" max="32" step="0.5" value="12">
-                    </span>
-                </label>
-                <label>
-                    Camera angle
-                    <span class="range-pair">
-                        <input id="cameraAzimuthDeg" type="range" min="0" max="360" step="1" value="45">
-                        <input id="cameraAzimuthDegValue" type="number" min="0" max="360" step="1" value="45">
-                    </span>
-                </label>
-                <label>
-                    Camera height
-                    <span class="range-pair">
-                        <input id="cameraElevationDeg" type="range" min="1" max="89" step="1" value="25">
-                        <input id="cameraElevationDegValue" type="number" min="1" max="89" step="1" value="25">
-                    </span>
-                </label>
-            </div>
+            <div class="settings-scroll">
+                <section
+                    id="generationPanel"
+                    class="tab-panel is-active"
+                    role="tabpanel"
+                    aria-labelledby="generationTab"
+                    data-tab-panel="generation"
+                >
+                    <form id="generatorForm" class="control-group">
+                        <h2 class="group-title">Generation</h2>
+                        <label>
+                            Generate count
+                            <input id="generateCount" type="number" value="300" min="1" max="2000" step="1">
+                        </label>
+                        <div class="number-grid">
+                            <label>
+                                Block count min
+                                <input id="blockCountMin" type="number" value="5" min="1" max="2197" step="1">
+                            </label>
+                            <label>
+                                Block count max
+                                <input id="blockCountMax" type="number" value="15" min="1" max="2197" step="1">
+                            </label>
+                        </div>
+                        <div class="dimension-grid">
+                            <label>
+                                Rows
+                                <input id="maxRows" type="number" value="4" min="1" max="13" step="1">
+                            </label>
+                            <label>
+                                Columns
+                                <input id="maxCols" type="number" value="4" min="1" max="13" step="1">
+                            </label>
+                            <label>
+                                Height
+                                <input id="maxHeight" type="number" value="5" min="1" max="13" step="1">
+                            </label>
+                        </div>
+                        <label>
+                            Density
+                            <span class="range-pair">
+                                <input id="density" type="range" min="0" max="100" step="1" value="0">
+                                <input id="densityValue" type="number" min="0" max="100" step="1" value="0">
+                            </span>
+                        </label>
+                        <label class="inline">
+                            <input id="allowDuplicate" type="checkbox">
+                            Allow duplicates
+                        </label>
+                        <div class="actions">
+                            <button id="startButton" type="submit">Start</button>
+                            <button id="downloadButton" class="secondary" type="button" disabled>JPG</button>
+                        </div>
+                    </form>
 
-            <div class="control-group">
-                <h2 class="group-title">Light</h2>
-                <label class="inline">
-                    <input id="lightFollowsCamera" type="checkbox" checked>
-                    Follow camera
-                </label>
-                <label>
-                    Light angle
-                    <span class="range-pair">
-                        <input id="lightAzimuthDeg" type="range" min="0" max="360" step="1" value="45">
-                        <input id="lightAzimuthDegValue" type="number" min="0" max="360" step="1" value="45">
-                    </span>
-                </label>
-                <label>
-                    Light height
-                    <span class="range-pair">
-                        <input id="lightElevationDeg" type="range" min="1" max="89" step="1" value="25">
-                        <input id="lightElevationDegValue" type="number" min="1" max="89" step="1" value="25">
-                    </span>
-                </label>
-                <label>
-                    Ambient light
-                    <span class="range-pair">
-                        <input id="ambientLightIntensity" type="range" min="0" max="2" step="0.05" value="0.25">
-                        <input id="ambientLightIntensityValue" type="number" min="0" max="2" step="0.05" value="0.25">
-                    </span>
-                </label>
-                <label>
-                    Directional light
-                    <span class="range-pair">
-                        <input id="directionalLightIntensity" type="range" min="0" max="8" step="0.1" value="4">
-                        <input id="directionalLightIntensityValue" type="number" min="0" max="8" step="0.1" value="4">
-                    </span>
-                </label>
+                    <div class="control-group">
+                        <h2 class="group-title">Blocks</h2>
+                        <div class="navigation">
+                            <button
+                                id="prevButton"
+                                class="icon-button secondary"
+                                type="button"
+                                aria-label="Previous block"
+                                disabled
+                            >
+                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M15 6L9 12L15 18"></path>
+                                </svg>
+                            </button>
+                            <div id="blockPosition" class="block-position">0 / 0</div>
+                            <button
+                                id="nextButton"
+                                class="icon-button secondary"
+                                type="button"
+                                aria-label="Next block"
+                                disabled
+                            >
+                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M9 6L15 12L9 18"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <div id="blockMeta" class="block-meta"></div>
+                        <pre id="heightData"></pre>
+                    </div>
+                </section>
+
+                <section
+                    id="renderingPanel"
+                    class="tab-panel"
+                    role="tabpanel"
+                    aria-labelledby="renderingTab"
+                    data-tab-panel="rendering"
+                    hidden
+                >
+                    <div class="control-group">
+                        <h2 class="group-title">Render</h2>
+                        <div class="number-grid">
+                            <label>
+                                Background
+                                <input id="backgroundColor" type="color" value="#f6f7f9">
+                            </label>
+                            <label>
+                                Block color
+                                <input id="blockColor" type="color" value="#c0aa81">
+                            </label>
+                        </div>
+                        <label>
+                            Edge color
+                            <input id="edgeColor" type="color" value="#000000">
+                        </label>
+                        <label>
+                            Edge thickness
+                            <span class="range-pair">
+                                <input id="edgeThickness" type="range" min="1" max="12" step="1" value="4">
+                                <input id="edgeThicknessValue" type="number" min="1" max="12" step="1" value="4">
+                            </span>
+                        </label>
+                        <label>
+                            Camera distance
+                            <span class="range-pair">
+                                <input id="cameraDistance" type="range" min="6" max="32" step="0.5" value="12">
+                                <input id="cameraDistanceValue" type="number" min="6" max="32" step="0.5" value="12">
+                            </span>
+                        </label>
+                        <label>
+                            Camera angle
+                            <span class="range-pair">
+                                <input id="cameraAzimuthDeg" type="range" min="0" max="360" step="1" value="50">
+                                <input id="cameraAzimuthDegValue" type="number" min="0" max="360" step="1" value="50">
+                            </span>
+                        </label>
+                        <label>
+                            Camera height
+                            <span class="range-pair">
+                                <input id="cameraElevationDeg" type="range" min="1" max="89" step="1" value="20">
+                                <input id="cameraElevationDegValue" type="number" min="1" max="89" step="1" value="20">
+                            </span>
+                        </label>
+                    </div>
+
+                    <div class="control-group">
+                        <h2 class="group-title">Light</h2>
+                        <label class="inline">
+                            <input id="lightFollowsCamera" type="checkbox" checked>
+                            Follow camera
+                        </label>
+                        <label>
+                            Light angle
+                            <span class="range-pair">
+                                <input id="lightAzimuthDeg" type="range" min="0" max="360" step="1" value="45">
+                                <input id="lightAzimuthDegValue" type="number" min="0" max="360" step="1" value="45">
+                            </span>
+                        </label>
+                        <label>
+                            Light height
+                            <span class="range-pair">
+                                <input id="lightElevationDeg" type="range" min="1" max="89" step="1" value="25">
+                                <input id="lightElevationDegValue" type="number" min="1" max="89" step="1" value="25">
+                            </span>
+                        </label>
+                        <label>
+                            Ambient light
+                            <span class="range-pair">
+                                <input id="ambientLightIntensity" type="range" min="0" max="2" step="0.05" value="0.25">
+                                <input id="ambientLightIntensityValue" type="number" min="0" max="2" step="0.05" value="0.25">
+                            </span>
+                        </label>
+                        <label>
+                            Directional light
+                            <span class="range-pair">
+                                <input id="directionalLightIntensity" type="range" min="0" max="8" step="0.1" value="4">
+                                <input id="directionalLightIntensityValue" type="number" min="0" max="8" step="0.1" value="4">
+                            </span>
+                        </label>
+                    </div>
+                </section>
             </div>
         </aside>
 
         <section class="stage">
             <div class="canvas-wrap">
-                <canvas id="renderCanvas" width="1200" height="1200"></canvas>
+                <canvas
+                    id="renderCanvas"
+                    width="1200"
+                    height="1200"
+                    tabindex="0"
+                    aria-label="Block preview"
+                ></canvas>
             </div>
         </section>
     </main>
