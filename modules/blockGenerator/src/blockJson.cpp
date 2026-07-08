@@ -120,28 +120,32 @@ void writeJsonValue(std::ostream& output, const json& data, int depth)
 }
 }
 
+GeneratorOptions generatorOptionsFromJson(const json& data)
+{
+    GeneratorOptions options{
+        data.at("generate_count").get<int>(),
+        data.at("block_count_min").get<int>(),
+        data.at("block_count_max").get<int>(),
+        data.at("max_r").get<int>(),
+        data.at("max_c").get<int>(),
+        data.at("max_h").get<int>(),
+        data.at("density").get<double>(),
+        data.at("allow_duplicate").get<bool>()
+    };
+
+    validateOptions(options);
+    return options;
+}
+
 GeneratorOptions readGeneratorOptions(const std::string& input_path)
 {
-	std::ifstream input(input_path);
-	if (!input)
-		throw std::runtime_error("Cannot open input json file: " + input_path);
+    std::ifstream input(input_path);
+    if (!input)
+        throw std::runtime_error("Cannot open input json file: " + input_path);
 
-	json data;
-	input >> data;
-
-	GeneratorOptions options{
-		data.at("generate_count").get<int>(),
-		data.at("block_count_min").get<int>(),
-		data.at("block_count_max").get<int>(),
-		data.at("max_r").get<int>(),
-		data.at("max_c").get<int>(),
-		data.at("max_h").get<int>(),
-		data.at("density").get<double>(),
-		data.at("allow_duplicate").get<bool>()
-	};
-
-	validateOptions(options);
-	return options;
+    json data;
+    input >> data;
+    return generatorOptionsFromJson(data);
 }
 
 json blockToJson(const blockData& block_data, int index)
@@ -209,6 +213,14 @@ json generateBlocksToJson(const GeneratorOptions& options)
 		{"input", optionsToJson(options)},
 		{"blocks", blocks}
 	};
+}
+
+json generateBlocksFromJsonText(const std::string& input_json_text)
+{
+    json input = json::parse(input_json_text);
+    GeneratorOptions options = generatorOptionsFromJson(input);
+
+    return generateBlocksToJson(options);
 }
 
 void writeJsonFile(const std::string& output_path, const json& data)

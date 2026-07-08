@@ -57,6 +57,7 @@ blockGenerator/temp/
 blockGenerator/tmp/
 
 # Emscripten / web compiler outputs
+apps/web/public/generated/
 *.wasm
 *.wasm.map
 *.worker.js
@@ -74,3 +75,7 @@ coverage/
 !.env.example
 
 *.json
+!package.json
+!package-lock.json
+!modules/**/package.json
+!modules/**/package-lock.json

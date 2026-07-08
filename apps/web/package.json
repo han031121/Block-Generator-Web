@@ -1,0 +1,12 @@
+{
+    "name": "block-generator-web",
+    "version": "0.1.0",
+    "private": true,
+    "type": "commonjs",
+    "scripts": {
+        "build:generator-wasm": "cd ../../modules/blockGenerator && mingw32-make wasm",
+        "start": "npm run build:generator-wasm && node src/server.js",
+        "serve": "npm run start",
+        "test": "npm run build:generator-wasm && node --test \"tests/**/*.test.js\""
+    }
+}

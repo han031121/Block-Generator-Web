@@ -68,7 +68,7 @@ void blockData::makeBlock()
     {
         double weight_sum = 0;
         std::vector<Tuple> adj;
-        bool selected[MAX_SIZE][MAX_SIZE][MAX_SIZE] = {0};
+        bool selected[MAX_SIZE][MAX_SIZE][MAX_SIZE] = {};
         std::vector<std::pair<Tuple, double>> weight_list;
 
         for (Tuple cur : created)
