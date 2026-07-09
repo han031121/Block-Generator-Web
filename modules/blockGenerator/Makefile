@@ -17,7 +17,7 @@ WASM_FLAGS := \
 	-sEXPORT_NAME=createBlockGeneratorModule \
 	-sEXPORTED_FUNCTIONS=['_generate_blocks_json','_free_generated_string'] \
 	-sEXPORTED_RUNTIME_METHODS=['UTF8ToString','cwrap'] \
-	-sALLOW_MEMORY_GROWTH=1 \
+	-sINITIAL_MEMORY=128MB \
 	-sFILESYSTEM=0
 
 .PHONY: all clean run wasm wasm-clean
