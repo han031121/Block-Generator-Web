@@ -4,7 +4,8 @@ async function createGeneratorModule() {
     let moduleFactory;
 
     try {
-        moduleFactory = (await import('/generated/blockGenerator.js')).default;
+        const moduleUrl = new URL('../../generated/blockGenerator.js', import.meta.url);
+        moduleFactory = (await import(moduleUrl.href)).default;
     } catch (error) {
         throw new Error(
             'Cannot load blockGenerator WebAssembly. Run mingw32-make wasm in modules/blockGenerator.'
@@ -13,7 +14,7 @@ async function createGeneratorModule() {
 
     return moduleFactory({
         locateFile(path) {
-            return `/generated/${path}`;
+            return new URL(`../../generated/${path}`, import.meta.url).href;
         }
     });
 }

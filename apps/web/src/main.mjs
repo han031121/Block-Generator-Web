@@ -1,7 +1,7 @@
 import {
     DEFAULT_RENDER_OPTIONS,
     ThreeBlockRenderer
-} from '/modules/blockRenderer/src/core/index.mjs';
+} from '../modules/blockRenderer/src/core/index.mjs';
 import { generateBlockJson } from './api/blockGeneratorWasm.mjs';
 import {
     normalizeBlockJsonData,

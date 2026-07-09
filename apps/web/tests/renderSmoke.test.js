@@ -99,11 +99,11 @@ test('runs the web generation flow and renders a nonblank Three.js canvas', {
     assert.equal(blockPositionText, '1 / 300');
 
     await page.locator('#renderCanvas').evaluate((canvas) => canvas.focus());
-    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('.');
     blockPositionText = await page.textContent('#blockPosition');
     assert.equal(blockPositionText, '2 / 300');
 
-    await page.keyboard.press('ArrowLeft');
+    await page.keyboard.press(',');
     blockPositionText = await page.textContent('#blockPosition');
     assert.equal(blockPositionText, '1 / 300');
 
@@ -163,6 +163,24 @@ test('runs the web generation flow and renders a nonblank Three.js canvas', {
     });
 
     let lightPositionState = await page.evaluate(() => ({
+        followsCamera: document.querySelector('#lightFollowsCamera').checked,
+        lightAzimuthDisabled: document.querySelector('#lightAzimuthDeg').disabled,
+        lightAzimuthValueDisabled: document.querySelector('#lightAzimuthDegValue').disabled,
+        lightElevationDisabled: document.querySelector('#lightElevationDeg').disabled,
+        lightElevationValueDisabled: document.querySelector('#lightElevationDegValue').disabled,
+        cameraAzimuth: document.querySelector('#cameraAzimuthDeg').value,
+        cameraElevation: document.querySelector('#cameraElevationDeg').value,
+        lightAzimuth: document.querySelector('#lightAzimuthDeg').value,
+        lightElevation: document.querySelector('#lightElevationDeg').value
+    }));
+    assert.equal(lightPositionState.followsCamera, false);
+    assert.equal(lightPositionState.lightAzimuthDisabled, false);
+    assert.equal(lightPositionState.lightAzimuthValueDisabled, false);
+    assert.equal(lightPositionState.lightElevationDisabled, false);
+    assert.equal(lightPositionState.lightElevationValueDisabled, false);
+
+    await page.check('#lightFollowsCamera');
+    lightPositionState = await page.evaluate(() => ({
         followsCamera: document.querySelector('#lightFollowsCamera').checked,
         lightAzimuthDisabled: document.querySelector('#lightAzimuthDeg').disabled,
         lightAzimuthValueDisabled: document.querySelector('#lightAzimuthDegValue').disabled,
@@ -251,14 +269,14 @@ test('runs the web generation flow and renders a nonblank Three.js canvas', {
         lightElevationValue: Number(document.querySelector('#lightElevationDegValue').value)
     }));
     assert.deepEqual(lightPositionState, {
-        cameraAzimuth: 104,
-        cameraAzimuthValue: 104,
-        cameraElevation: cameraElevationBeforeDrag + 7,
-        cameraElevationValue: cameraElevationBeforeDrag + 7,
-        lightAzimuth: 104,
-        lightAzimuthValue: 104,
-        lightElevation: cameraElevationBeforeDrag + 7,
-        lightElevationValue: cameraElevationBeforeDrag + 7
+        cameraAzimuth: 76,
+        cameraAzimuthValue: 76,
+        cameraElevation: cameraElevationBeforeDrag - 7,
+        cameraElevationValue: cameraElevationBeforeDrag - 7,
+        lightAzimuth: 76,
+        lightAzimuthValue: 76,
+        lightElevation: cameraElevationBeforeDrag - 7,
+        lightElevationValue: cameraElevationBeforeDrag - 7
     });
 
     await page.mouse.wheel(0, -100);
