@@ -6,15 +6,15 @@ export const DEFAULT_RENDER_OPTIONS = Object.freeze({
     edgeColor: '#000000',
     edgeThickness: 4,
     cameraDistance: 12,
-    cameraAzimuthDeg: 45,
+    cameraAzimuthDeg: 35,
     cameraElevationDeg: 25,
     fitScale: 1.35,
-    ambientLightIntensity: 0.25,
+    ambientLightIntensity: 0.15,
     directionalLightIntensity: 4.0,
-    lightFollowsCamera: true,
+    lightFollowsCamera: false,
     lightDistance: 12,
-    lightAzimuthDeg: 45,
-    lightElevationDeg: 25
+    lightAzimuthDeg: 30,
+    lightElevationDeg: 20
 });
 
 export function mergeRenderOptions(options = {}) {

@@ -1,14 +1,21 @@
 import {
     DEFAULT_RENDER_OPTIONS,
     ThreeBlockRenderer
-} from '/modules/blockRenderer/src/core/index.mjs';
+} from '../modules/blockRenderer/src/core/index.mjs';
 import { generateBlockJson } from './api/blockGeneratorWasm.mjs';
 import {
     normalizeBlockJsonData,
     selectBlock
 } from './api/blockJsonBrowser.mjs';
 
+const app = document.querySelector('.app');
+const settingsPanel = document.querySelector('#settingsPanel');
+const settingsOpenButton = document.querySelector('#settingsOpenButton');
+const settingsCloseButton = document.querySelector('#settingsCloseButton');
+const tabButtons = Array.from(document.querySelectorAll('[data-tab-target]'));
+const tabPanels = Array.from(document.querySelectorAll('[data-tab-panel]'));
 const canvas = document.querySelector('#renderCanvas');
+const canvasWrap = document.querySelector('.canvas-wrap');
 const status = document.querySelector('#status');
 const heightDataOutput = document.querySelector('#heightData');
 const blockPosition = document.querySelector('#blockPosition');
@@ -18,6 +25,7 @@ const startButton = document.querySelector('#startButton');
 const prevButton = document.querySelector('#prevButton');
 const nextButton = document.querySelector('#nextButton');
 const downloadButton = document.querySelector('#downloadButton');
+const resetRenderButton = document.querySelector('#resetRenderButton');
 const generatorControls = {
     generateCount: document.querySelector('#generateCount'),
     blockCountMin: document.querySelector('#blockCountMin'),
@@ -56,11 +64,100 @@ const valueControls = {
     lightElevationDeg: document.querySelector('#lightElevationDegValue')
 };
 const LIGHT_POSITION_CONTROL_NAMES = ['lightAzimuthDeg', 'lightElevationDeg'];
+const CAMERA_DRAG_SENSITIVITY_DEG = 0.35;
+const CAMERA_WHEEL_DISTANCE_STEP = 0.5;
 
 const renderer = new ThreeBlockRenderer(canvas, DEFAULT_RENDER_OPTIONS);
 let activeBlockJson = null;
 let activeBlock = null;
 let activeIndex = 0;
+let cameraDragState = null;
+
+function setSettingsPanelOpen(isOpen, shouldFocus = false) {
+    app.classList.toggle('settings-collapsed', !isOpen);
+    settingsPanel.setAttribute('aria-hidden', String(!isOpen));
+    settingsOpenButton.hidden = isOpen;
+    settingsOpenButton.setAttribute('aria-expanded', String(isOpen));
+    settingsCloseButton.setAttribute('aria-expanded', String(isOpen));
+
+    if (isOpen && shouldFocus) {
+        settingsCloseButton.focus();
+    }
+
+    if (!isOpen && settingsPanel.contains(document.activeElement)) {
+        settingsOpenButton.focus();
+    }
+}
+
+function setActiveSettingsTab(tabName, shouldFocus = false) {
+    for (const button of tabButtons) {
+        const isActive = button.dataset.tabTarget === tabName;
+        button.classList.toggle('is-active', isActive);
+        button.setAttribute('aria-selected', String(isActive));
+        button.tabIndex = isActive ? 0 : -1;
+
+        if (isActive && shouldFocus) {
+            button.focus();
+        }
+    }
+
+    for (const panel of tabPanels) {
+        const isActive = panel.dataset.tabPanel === tabName;
+        panel.classList.toggle('is-active', isActive);
+        panel.hidden = !isActive;
+    }
+}
+
+function moveSettingsTab(offset) {
+    const activeTabIndex = tabButtons.findIndex((button) =>
+        button.getAttribute('aria-selected') === 'true'
+    );
+    const nextIndex = (activeTabIndex + offset + tabButtons.length) % tabButtons.length;
+
+    setActiveSettingsTab(tabButtons[nextIndex].dataset.tabTarget, true);
+}
+
+function bindSettingsShellEvents() {
+    settingsOpenButton.addEventListener('click', () => {
+        setSettingsPanelOpen(true, true);
+    });
+    settingsCloseButton.addEventListener('click', () => {
+        setSettingsPanelOpen(false);
+    });
+
+    for (const button of tabButtons) {
+        button.addEventListener('click', () => {
+            setActiveSettingsTab(button.dataset.tabTarget);
+        });
+        button.addEventListener('keydown', (event) => {
+            if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+                event.preventDefault();
+                moveSettingsTab(1);
+                return;
+            }
+
+            if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+                event.preventDefault();
+                moveSettingsTab(-1);
+                return;
+            }
+
+            if (event.key === 'Home') {
+                event.preventDefault();
+                setActiveSettingsTab(tabButtons[0].dataset.tabTarget, true);
+                return;
+            }
+
+            if (event.key === 'End') {
+                event.preventDefault();
+                setActiveSettingsTab(
+                    tabButtons[tabButtons.length - 1].dataset.tabTarget,
+                    true
+                );
+            }
+        });
+    }
+}
 
 function setStatus(message) {
     status.textContent = message;
@@ -142,6 +239,14 @@ function clampToControlRange(value, control) {
     return Math.min(max, Math.max(min, value));
 }
 
+function formatControlValue(value) {
+    return String(Math.round(Number(value) * 1000) / 1000);
+}
+
+function normalizeDegrees(value) {
+    return ((value % 360) + 360) % 360;
+}
+
 function syncRangeToNumber(name) {
     valueControls[name].value = controls[name].value;
 }
@@ -175,8 +280,22 @@ function syncGeneratorNumberToRange(name) {
 }
 
 function setControlPairValue(name, value) {
-    controls[name].value = String(value);
+    const nextValue = clampToControlRange(Number(value), controls[name]);
+    controls[name].value = formatControlValue(nextValue);
     valueControls[name].value = controls[name].value;
+}
+
+function setCameraAngleValues(azimuthDeg, elevationDeg) {
+    setControlPairValue('cameraAzimuthDeg', normalizeDegrees(azimuthDeg));
+    setControlPairValue('cameraElevationDeg', elevationDeg);
+
+    if (controls.lightFollowsCamera.checked) {
+        syncLightPositionToCamera();
+    }
+}
+
+function setCameraDistanceValue(distance) {
+    setControlPairValue('cameraDistance', distance);
 }
 
 function syncLightPositionToCamera() {
@@ -195,6 +314,31 @@ function updateLightPositionControlState() {
         controls[name].disabled = shouldDisable;
         valueControls[name].disabled = shouldDisable;
     }
+}
+
+function resetRenderOptions() {
+    controls.backgroundColor.value = DEFAULT_RENDER_OPTIONS.backgroundColor;
+    controls.blockColor.value = DEFAULT_RENDER_OPTIONS.blockColor;
+    controls.edgeColor.value = DEFAULT_RENDER_OPTIONS.edgeColor;
+    controls.lightFollowsCamera.checked = DEFAULT_RENDER_OPTIONS.lightFollowsCamera;
+
+    setControlPairValue('edgeThickness', DEFAULT_RENDER_OPTIONS.edgeThickness);
+    setControlPairValue('cameraDistance', DEFAULT_RENDER_OPTIONS.cameraDistance);
+    setControlPairValue('cameraAzimuthDeg', DEFAULT_RENDER_OPTIONS.cameraAzimuthDeg);
+    setControlPairValue('cameraElevationDeg', DEFAULT_RENDER_OPTIONS.cameraElevationDeg);
+    setControlPairValue(
+        'ambientLightIntensity',
+        DEFAULT_RENDER_OPTIONS.ambientLightIntensity
+    );
+    setControlPairValue(
+        'directionalLightIntensity',
+        DEFAULT_RENDER_OPTIONS.directionalLightIntensity
+    );
+    setControlPairValue('lightAzimuthDeg', DEFAULT_RENDER_OPTIONS.lightAzimuthDeg);
+    setControlPairValue('lightElevationDeg', DEFAULT_RENDER_OPTIONS.lightElevationDeg);
+
+    updateLightPositionControlState();
+    renderActiveBlock();
 }
 
 function updateHeightData(block) {
@@ -273,6 +417,14 @@ async function startGeneration() {
     }
 }
 
+function requestGenerationStart() {
+    if (startButton.disabled) {
+        return;
+    }
+
+    startGeneration().catch((error) => setStatus(error.message));
+}
+
 function moveBlock(offset) {
     if (!activeBlockJson) {
         return;
@@ -288,16 +440,18 @@ function moveBlock(offset) {
 
 function downloadImage() {
     if (!activeBlock) {
-        return;
+        setStatus('Generate a block before saving JPG.');
+        return false;
     }
 
     renderer.downloadJpeg(`block-${activeBlock.index}.jpg`);
+    return true;
 }
 
 function bindGeneratorEvents() {
     generatorForm.addEventListener('submit', (event) => {
         event.preventDefault();
-        startGeneration().catch((error) => setStatus(error.message));
+        requestGenerationStart();
     });
     prevButton.addEventListener('click', () => moveBlock(-1));
     nextButton.addEventListener('click', () => moveBlock(1));
@@ -312,6 +466,7 @@ function bindGeneratorEvents() {
 }
 
 function bindRenderEvents() {
+    resetRenderButton.addEventListener('click', resetRenderOptions);
     controls.backgroundColor.addEventListener('input', renderActiveBlock);
     controls.blockColor.addEventListener('input', renderActiveBlock);
     controls.edgeColor.addEventListener('input', renderActiveBlock);
@@ -341,7 +496,123 @@ function bindRenderEvents() {
     }
 }
 
+function isEditingText(element) {
+    if (!element) {
+        return false;
+    }
+
+    const tagName = element.tagName;
+    return element.isContentEditable ||
+        tagName === 'INPUT' ||
+        tagName === 'SELECT' ||
+        tagName === 'TEXTAREA';
+}
+
+function hasShortcutModifier(event) {
+    return event.altKey || event.ctrlKey || event.metaKey;
+}
+
+function bindKeyboardShortcuts() {
+    document.addEventListener('keydown', (event) => {
+        if (event.defaultPrevented || isEditingText(event.target)) {
+            return;
+        }
+
+        if (event.key === ',' && !hasShortcutModifier(event)) {
+            event.preventDefault();
+            moveBlock(-1);
+            return;
+        }
+
+        if (event.key === '.' && !hasShortcutModifier(event)) {
+            event.preventDefault();
+            moveBlock(1);
+            return;
+        }
+
+        const key = event.key.toLowerCase();
+
+        if (key === 'g' && !hasShortcutModifier(event)) {
+            event.preventDefault();
+            requestGenerationStart();
+            return;
+        }
+
+        if (key === 's' && !event.altKey) {
+            event.preventDefault();
+            downloadImage();
+        }
+    });
+}
+
+function bindCanvasInteractionEvents() {
+    canvas.addEventListener('pointerdown', (event) => {
+        if (event.button !== 0) {
+            return;
+        }
+
+        cameraDragState = {
+            pointerId: event.pointerId,
+            startX: event.clientX,
+            startY: event.clientY,
+            startAzimuthDeg: Number(controls.cameraAzimuthDeg.value),
+            startElevationDeg: Number(controls.cameraElevationDeg.value)
+        };
+        canvas.focus({ preventScroll: true });
+        canvas.setPointerCapture(event.pointerId);
+        canvasWrap.classList.add('is-dragging');
+        event.preventDefault();
+    });
+
+    canvas.addEventListener('pointermove', (event) => {
+        if (!cameraDragState || event.pointerId !== cameraDragState.pointerId) {
+            return;
+        }
+
+        const deltaX = event.clientX - cameraDragState.startX;
+        const deltaY = event.clientY - cameraDragState.startY;
+        setCameraAngleValues(
+            cameraDragState.startAzimuthDeg - deltaX * CAMERA_DRAG_SENSITIVITY_DEG,
+            cameraDragState.startElevationDeg + deltaY * CAMERA_DRAG_SENSITIVITY_DEG
+        );
+        renderActiveBlock();
+        event.preventDefault();
+    });
+
+    const endCameraDrag = (event) => {
+        if (!cameraDragState || event.pointerId !== cameraDragState.pointerId) {
+            return;
+        }
+
+        if (canvas.hasPointerCapture(event.pointerId)) {
+            canvas.releasePointerCapture(event.pointerId);
+        }
+
+        cameraDragState = null;
+        canvasWrap.classList.remove('is-dragging');
+    };
+
+    canvas.addEventListener('pointerup', endCameraDrag);
+    canvas.addEventListener('pointercancel', endCameraDrag);
+
+    canvas.addEventListener('wheel', (event) => {
+        const direction = Math.sign(event.deltaY);
+        if (direction === 0) {
+            return;
+        }
+
+        const step = Number(controls.cameraDistance.step) || CAMERA_WHEEL_DISTANCE_STEP;
+        setCameraDistanceValue(Number(controls.cameraDistance.value) + direction * step);
+        renderActiveBlock();
+        event.preventDefault();
+    }, { passive: false });
+}
+
+bindSettingsShellEvents();
+setSettingsPanelOpen(true);
 bindGeneratorEvents();
 bindRenderEvents();
+bindCanvasInteractionEvents();
+bindKeyboardShortcuts();
 updateLightPositionControlState();
 updateNavigationState();
