@@ -37,5 +37,5 @@ node src/main.js [blockJsonPath] [blockIndex]
 If no JSON path is provided, the loader reads:
 
 ```text
-../blockGenerator/fixtures/output/test_output.json
+../blockGenerator/fixtures/output/sample_output.json
 ```

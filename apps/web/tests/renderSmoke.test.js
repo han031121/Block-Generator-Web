@@ -82,13 +82,86 @@ test('runs the web generation flow and renders a nonblank Three.js canvas', {
 
     await page.click('#startButton');
     await page.waitForFunction(
+        () => !document.querySelector('#generationOverlay')?.hidden,
+        null,
+        { timeout: 5000 }
+    );
+    let generationUiState = await page.evaluate(() => ({
+        statusText: document.querySelector('#status').textContent,
+        statusState: document.querySelector('#status').dataset.state,
+        statusBusy: document.querySelector('#status').getAttribute('aria-busy'),
+        formBusy: document.querySelector('#generatorForm').getAttribute('aria-busy'),
+        overlayHidden: document.querySelector('#generationOverlay').hidden,
+        startDisabled: document.querySelector('#startButton').disabled,
+        startText: document.querySelector('#startButton').textContent
+    }));
+    assert.deepEqual(generationUiState, {
+        statusText: 'Generating blocks... Timeout after 5 seconds.',
+        statusState: 'loading',
+        statusBusy: 'true',
+        formBusy: 'true',
+        overlayHidden: false,
+        startDisabled: true,
+        startText: 'Generating...'
+    });
+
+    await page.waitForFunction(
         () => document.querySelector('#status')?.textContent.includes('Generated'),
         null,
         { timeout: 30000 }
     );
+    generationUiState = await page.evaluate(() => ({
+        statusState: document.querySelector('#status').dataset.state,
+        statusBusy: document.querySelector('#status').getAttribute('aria-busy'),
+        formBusy: document.querySelector('#generatorForm').getAttribute('aria-busy'),
+        overlayHidden: document.querySelector('#generationOverlay').hidden,
+        startDisabled: document.querySelector('#startButton').disabled,
+        startText: document.querySelector('#startButton').textContent
+    }));
+    assert.deepEqual(generationUiState, {
+        statusState: 'success',
+        statusBusy: 'false',
+        formBusy: 'false',
+        overlayHidden: true,
+        startDisabled: false,
+        startText: 'Start'
+    });
 
     let blockPositionText = await page.textContent('#blockPosition');
     assert.equal(blockPositionText, '1 / 300');
+
+    const timeoutState = await page.evaluate(async () => {
+        const {
+            generateBlockJson,
+            isBlockGenerationTimeoutError
+        } = await import('/src/api/blockGeneratorWasm.mjs');
+
+        try {
+            await generateBlockJson({
+                generate_count: 300,
+                block_count_min: 5,
+                block_count_max: 15,
+                max_r: 4,
+                max_c: 4,
+                max_h: 5,
+                density: 0,
+                allow_duplicate: false
+            }, { timeoutMs: 0 });
+
+            return { timedOut: false };
+        } catch (error) {
+            return {
+                timedOut: isBlockGenerationTimeoutError(error),
+                name: error.name,
+                message: error.message
+            };
+        }
+    });
+    assert.deepEqual(timeoutState, {
+        timedOut: true,
+        name: 'BlockGenerationTimeoutError',
+        message: 'Block generation timed out after 0 seconds.'
+    });
 
     await page.click('#nextButton');
     blockPositionText = await page.textContent('#blockPosition');

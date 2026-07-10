@@ -5,8 +5,8 @@ TARGET := bin/blockGenerator.exe
 SRCS := src/main.cpp src/blockData.cpp src/blockJson.cpp
 WASM_SRCS := src/wasm.cpp src/blockData.cpp src/blockJson.cpp
 HEADERS := include/blockData.hpp include/blockJson.hpp
-INPUT := fixtures/input/test_input.json
-OUTPUT := fixtures/output/test_output.json
+INPUT := fixtures/input/sample_input.json
+OUTPUT := fixtures/output/sample_output.json
 WASM_OUT_DIR := ../../apps/web/public/generated
 WASM_JS := $(WASM_OUT_DIR)/blockGenerator.js
 
