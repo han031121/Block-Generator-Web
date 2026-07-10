@@ -5,8 +5,8 @@
 
 int main(int argc, char* argv[])
 {
-	const std::string input_path = argc > 1 ? argv[1] : "test_input.json";
-	const std::string output_path = argc > 2 ? argv[2] : "test_output.json";
+	const std::string input_path = argc > 1 ? argv[1] : "sample_input.json";
+	const std::string output_path = argc > 2 ? argv[2] : "sample_output.json";
 
 	try
 	{

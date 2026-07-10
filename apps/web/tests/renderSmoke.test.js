@@ -82,13 +82,121 @@ test('runs the web generation flow and renders a nonblank Three.js canvas', {
 
     await page.click('#startButton');
     await page.waitForFunction(
+        () => !document.querySelector('#generationOverlay')?.hidden,
+        null,
+        { timeout: 5000 }
+    );
+    let generationUiState = await page.evaluate(() => ({
+        statusText: document.querySelector('#status').textContent,
+        statusState: document.querySelector('#status').dataset.state,
+        statusBusy: document.querySelector('#status').getAttribute('aria-busy'),
+        formBusy: document.querySelector('#generatorForm').getAttribute('aria-busy'),
+        overlayHidden: document.querySelector('#generationOverlay').hidden,
+        startDisabled: document.querySelector('#startButton').disabled,
+        startText: document.querySelector('#startButton').textContent
+    }));
+    assert.deepEqual(generationUiState, {
+        statusText: 'Generating blocks... Timeout after 5 seconds.',
+        statusState: 'loading',
+        statusBusy: 'true',
+        formBusy: 'true',
+        overlayHidden: false,
+        startDisabled: true,
+        startText: 'Generating...'
+    });
+
+    await page.waitForFunction(
         () => document.querySelector('#status')?.textContent.includes('Generated'),
         null,
         { timeout: 30000 }
     );
+    generationUiState = await page.evaluate(() => ({
+        statusState: document.querySelector('#status').dataset.state,
+        statusBusy: document.querySelector('#status').getAttribute('aria-busy'),
+        formBusy: document.querySelector('#generatorForm').getAttribute('aria-busy'),
+        overlayHidden: document.querySelector('#generationOverlay').hidden,
+        startDisabled: document.querySelector('#startButton').disabled,
+        startText: document.querySelector('#startButton').textContent
+    }));
+    assert.deepEqual(generationUiState, {
+        statusState: 'success',
+        statusBusy: 'false',
+        formBusy: 'false',
+        overlayHidden: true,
+        startDisabled: false,
+        startText: 'Start'
+    });
 
     let blockPositionText = await page.textContent('#blockPosition');
     assert.equal(blockPositionText, '1 / 300');
+
+    const blockMetaState = await page.evaluate(() => {
+        const identifyBlock = document.querySelector('#blockMeta .block-identify-code');
+        const identifyCode = identifyBlock?.querySelector('code');
+        const identifyStyle = identifyBlock ? getComputedStyle(identifyBlock) : null;
+        const labels = Array.from(
+            document.querySelectorAll('#blockMeta .block-meta-label')
+        );
+        const blockDataTitle = document.querySelector('.block-data-title');
+
+        return {
+            hasIdentifyBlock: identifyBlock !== null,
+            hasIdentifyCode: identifyCode !== null,
+            identifyTextLength: identifyCode?.textContent.length ?? 0,
+            whiteSpace: identifyStyle?.whiteSpace ?? null,
+            overflowWrap: identifyStyle?.overflowWrap ?? null,
+            overflowX: identifyStyle?.overflowX ?? null,
+            labelTexts: labels.map((label) => label.textContent),
+            labelWeights: labels.map((label) => getComputedStyle(label).fontWeight),
+            blockDataTitleText: blockDataTitle?.textContent ?? null,
+            blockDataTitleWeight: blockDataTitle ?
+                getComputedStyle(blockDataTitle).fontWeight :
+                null
+        };
+    });
+    assert.equal(blockMetaState.hasIdentifyBlock, true);
+    assert.equal(blockMetaState.hasIdentifyCode, true);
+    assert.ok(blockMetaState.identifyTextLength > 0);
+    assert.equal(blockMetaState.whiteSpace, 'pre-wrap');
+    assert.equal(blockMetaState.overflowWrap, 'anywhere');
+    assert.equal(blockMetaState.overflowX, 'hidden');
+    assert.deepEqual(blockMetaState.labelTexts, ['Index', 'Cubes', 'Size', 'Identify']);
+    assert.ok(blockMetaState.labelWeights.every((weight) => Number(weight) >= 700));
+    assert.equal(blockMetaState.blockDataTitleText, 'Block data');
+    assert.ok(Number(blockMetaState.blockDataTitleWeight) >= 700);
+
+    const timeoutState = await page.evaluate(async () => {
+        const {
+            generateBlockJson,
+            isBlockGenerationTimeoutError
+        } = await import('/src/api/blockGeneratorWasm.mjs');
+
+        try {
+            await generateBlockJson({
+                generate_count: 300,
+                block_count_min: 5,
+                block_count_max: 15,
+                max_r: 4,
+                max_c: 4,
+                max_h: 5,
+                density: 0,
+                allow_duplicate: false
+            }, { timeoutMs: 0 });
+
+            return { timedOut: false };
+        } catch (error) {
+            return {
+                timedOut: isBlockGenerationTimeoutError(error),
+                name: error.name,
+                message: error.message
+            };
+        }
+    });
+    assert.deepEqual(timeoutState, {
+        timedOut: true,
+        name: 'BlockGenerationTimeoutError',
+        message: 'Block generation timed out after 0 seconds.'
+    });
 
     await page.click('#nextButton');
     blockPositionText = await page.textContent('#blockPosition');
@@ -354,6 +462,69 @@ test('runs the web generation flow and renders a nonblank Three.js canvas', {
     assert.ok(metrics.nonBackgroundPixels > 1000);
     assert.ok(metrics.darkPixels > 50);
     assert.equal(metrics.hasJpgDataUrl, true);
+
+    const rendererReuseState = await page.evaluate(async () => {
+        const { DEFAULT_RENDER_OPTIONS, ThreeBlockRenderer } =
+            await import('/modules/blockRenderer/src/core/index.mjs');
+        const canvas = document.createElement('canvas');
+        const renderer = new ThreeBlockRenderer(canvas, DEFAULT_RENDER_OPTIONS);
+        const block = {
+            index: 1,
+            size: { r: 2, c: 2, h: 2 },
+            center: { r: 0.5, c: 0.5, h: 0.5 },
+            cubes: [
+                { r: 0, c: 0, h: 0 },
+                { r: 0, c: 1, h: 0 },
+                { r: 1, c: 0, h: 0 },
+                { r: 1, c: 1, h: 1 }
+            ]
+        };
+
+        renderer.render(block, DEFAULT_RENDER_OPTIONS);
+
+        const initialBlockGroup = renderer.blockGroup;
+        const initialBlockMaterial = renderer.blockMaterial;
+        const initialEdgeOverlay = renderer.edgeOverlay;
+        const initialEdgeMaterial = renderer.edgeMaterial;
+
+        renderer.render(block, {
+            ...DEFAULT_RENDER_OPTIONS,
+            backgroundColor: '#ffffff',
+            blockColor: '#ff0000',
+            edgeColor: '#00ff00'
+        });
+
+        const colorOnlyState = {
+            blockGroupReused: renderer.blockGroup === initialBlockGroup,
+            blockMaterialReused: renderer.blockMaterial === initialBlockMaterial,
+            edgeOverlayReused: renderer.edgeOverlay === initialEdgeOverlay,
+            edgeMaterialReused: renderer.edgeMaterial === initialEdgeMaterial
+        };
+
+        renderer.render(block, {
+            ...DEFAULT_RENDER_OPTIONS,
+            cameraAzimuthDeg: 90
+        });
+
+        return {
+            colorOnlyState,
+            cameraState: {
+                blockGroupReused: renderer.blockGroup === initialBlockGroup,
+                edgeOverlayRebuilt: renderer.edgeOverlay !== initialEdgeOverlay
+            }
+        };
+    });
+
+    assert.deepEqual(rendererReuseState.colorOnlyState, {
+        blockGroupReused: true,
+        blockMaterialReused: true,
+        edgeOverlayReused: true,
+        edgeMaterialReused: true
+    });
+    assert.deepEqual(rendererReuseState.cameraState, {
+        blockGroupReused: true,
+        edgeOverlayRebuilt: true
+    });
 
     await page.evaluate(() => {
         const originalClick = HTMLAnchorElement.prototype.click;

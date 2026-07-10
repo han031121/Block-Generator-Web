@@ -1,8 +1,28 @@
 #include "blockData.hpp"
 
+#include <cstdint>
+
+#ifdef __EMSCRIPTEN__
+#include <chrono>
+#endif
+
+namespace
+{
+std::uint32_t makeRandomSeed()
+{
+#ifdef __EMSCRIPTEN__
+    return static_cast<std::uint32_t>(
+        std::chrono::high_resolution_clock::now().time_since_epoch().count()
+    );
+#else
+    std::random_device rd;
+    return rd();
+#endif
+}
+}
+
 // generateBlock
-std::random_device rd;
-std::mt19937 mt(rd());
+std::mt19937 mt(makeRandomSeed());
 
 void blockData::generateBlock()
 {

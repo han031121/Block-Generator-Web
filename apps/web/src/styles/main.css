@@ -103,6 +103,19 @@ input {
     line-height: 1.45;
 }
 
+.status[data-state="loading"] {
+    color: #245d4d;
+}
+
+.status[data-state="success"] {
+    color: #246042;
+}
+
+.status[data-state="warning"],
+.status[data-state="error"] {
+    color: #9b2f20;
+}
+
 .settings-tabs {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -334,14 +347,40 @@ canvas:focus-visible {
 }
 
 .block-meta {
+    min-width: 0;
     min-height: 48px;
     display: grid;
     align-content: center;
-    gap: 2px;
+    gap: 6px;
     color: #44544f;
     font-size: 13px;
     line-height: 1.45;
-    white-space: pre-line;
+}
+
+.block-meta-line {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.block-meta-label,
+.block-data-title {
+    color: #23312d;
+    font-weight: 800;
+}
+
+.block-data-title {
+    font-size: 13px;
+}
+
+.block-identify-code {
+    min-width: 0;
+    min-height: 0;
+    max-height: min(180px, 24dvh);
+    white-space: pre-wrap;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 pre {
@@ -370,17 +409,65 @@ pre {
 }
 
 .canvas-wrap {
+    position: relative;
     width: min(100%, 900px, calc(100dvh - 48px));
     max-height: calc(100dvh - 48px);
     aspect-ratio: 1;
     border: 1px solid #bdcac6;
     background: #f6f7f9;
     cursor: grab;
+    overflow: hidden;
     touch-action: none;
 }
 
 .canvas-wrap.is-dragging {
     cursor: grabbing;
+}
+
+.canvas-wrap.is-generating {
+    cursor: progress;
+}
+
+.canvas-wrap.is-generating canvas {
+    opacity: 0.48;
+}
+
+.generation-overlay {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: 14px;
+    padding: 24px;
+    background: rgb(251 252 252 / 74%);
+    color: #17201d;
+    text-align: center;
+    pointer-events: none;
+}
+
+.generation-overlay[hidden] {
+    display: none;
+}
+
+.loading-spinner {
+    width: 52px;
+    height: 52px;
+    border: 5px solid rgb(46 115 94 / 20%);
+    border-top-color: #2e735e;
+    border-radius: 50%;
+    animation: spin 0.85s linear infinite;
+}
+
+.generation-overlay-text {
+    font-size: 14px;
+    font-weight: 800;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 canvas {

@@ -2,7 +2,11 @@ import {
     DEFAULT_RENDER_OPTIONS,
     ThreeBlockRenderer
 } from '../modules/blockRenderer/src/core/index.mjs';
-import { generateBlockJson } from './api/blockGeneratorWasm.mjs';
+import {
+    GENERATION_TIMEOUT_MS,
+    generateBlockJson,
+    isBlockGenerationTimeoutError
+} from './api/blockGeneratorWasm.mjs';
 import {
     normalizeBlockJsonData,
     selectBlock
@@ -16,6 +20,7 @@ const tabButtons = Array.from(document.querySelectorAll('[data-tab-target]'));
 const tabPanels = Array.from(document.querySelectorAll('[data-tab-panel]'));
 const canvas = document.querySelector('#renderCanvas');
 const canvasWrap = document.querySelector('.canvas-wrap');
+const generationOverlay = document.querySelector('#generationOverlay');
 const status = document.querySelector('#status');
 const heightDataOutput = document.querySelector('#heightData');
 const blockPosition = document.querySelector('#blockPosition');
@@ -66,12 +71,14 @@ const valueControls = {
 const LIGHT_POSITION_CONTROL_NAMES = ['lightAzimuthDeg', 'lightElevationDeg'];
 const CAMERA_DRAG_SENSITIVITY_DEG = 0.35;
 const CAMERA_WHEEL_DISTANCE_STEP = 0.5;
+const START_BUTTON_IDLE_LABEL = startButton.textContent;
 
 const renderer = new ThreeBlockRenderer(canvas, DEFAULT_RENDER_OPTIONS);
 let activeBlockJson = null;
 let activeBlock = null;
 let activeIndex = 0;
 let cameraDragState = null;
+let pendingRenderFrame = 0;
 
 function setSettingsPanelOpen(isOpen, shouldFocus = false) {
     app.classList.toggle('settings-collapsed', !isOpen);
@@ -159,8 +166,38 @@ function bindSettingsShellEvents() {
     }
 }
 
-function setStatus(message) {
+function formatDuration(milliseconds) {
+    return `${milliseconds / 1000} seconds`;
+}
+
+function setStatus(message, state = 'idle') {
     status.textContent = message;
+    status.dataset.state = state;
+}
+
+function setGenerationBusy(isBusy) {
+    startButton.disabled = isBusy;
+    startButton.textContent = isBusy ? 'Generating...' : START_BUTTON_IDLE_LABEL;
+    generatorForm.classList.toggle('is-generating', isBusy);
+    generatorForm.setAttribute('aria-busy', String(isBusy));
+    canvasWrap.classList.toggle('is-generating', isBusy);
+    generationOverlay.hidden = !isBusy;
+    generationOverlay.setAttribute('aria-hidden', String(!isBusy));
+    status.setAttribute('aria-busy', String(isBusy));
+}
+
+function setGenerationErrorStatus(error) {
+    if (isBlockGenerationTimeoutError(error)) {
+        const timeoutMs = error.timeoutMs ?? GENERATION_TIMEOUT_MS;
+        setStatus(
+            `Generation timed out after ${formatDuration(timeoutMs)}. ` +
+                'Reduce block count or increase Rows, Columns, or Height.',
+            'error'
+        );
+        return;
+    }
+
+    setStatus(error.message, 'error');
 }
 
 function readIntegerInput(control, label) {
@@ -357,27 +394,67 @@ function updateNavigationState() {
 
 function updateBlockMeta(block) {
     if (!block) {
-        blockMeta.textContent = '';
+        blockMeta.replaceChildren();
         heightDataOutput.textContent = '';
         return;
     }
 
-    blockMeta.textContent = [
-        `Index ${block.index}`,
-        `Cubes ${block.cubes.length}`,
-        `Size ${block.size.r} x ${block.size.c} x ${block.size.h}`,
-        `Identify ${block.identify ?? 'null'}`
-    ].join('\n');
+    const rows = [
+        ['Index', block.index],
+        ['Cubes', block.cubes.length],
+        ['Size', `${block.size.r} x ${block.size.c} x ${block.size.h}`]
+    ].map(([label, value]) => {
+        const row = document.createElement('div');
+        const labelElement = document.createElement('strong');
+        const valueElement = document.createTextNode(` ${value}`);
+
+        row.className = 'block-meta-line';
+        labelElement.className = 'block-meta-label';
+        labelElement.textContent = label;
+        row.append(labelElement, valueElement);
+        return row;
+    });
+
+    const identifyLabel = document.createElement('div');
+    const identifyLabelText = document.createElement('strong');
+
+    identifyLabel.className = 'block-meta-line';
+    identifyLabelText.className = 'block-meta-label';
+    identifyLabelText.textContent = 'Identify';
+    identifyLabel.append(identifyLabelText);
+
+    const identifyCode = document.createElement('code');
+    identifyCode.textContent = block.identify ?? 'null';
+
+    const identifyBlock = document.createElement('pre');
+    identifyBlock.className = 'block-identify-code';
+    identifyBlock.append(identifyCode);
+
+    blockMeta.replaceChildren(...rows, identifyLabel, identifyBlock);
 }
 
 function renderActiveBlock() {
+    if (pendingRenderFrame !== 0) {
+        cancelAnimationFrame(pendingRenderFrame);
+        pendingRenderFrame = 0;
+    }
+
     if (!activeBlock) {
         return;
     }
 
     renderer.render(activeBlock, readRenderOptions());
-    updateBlockMeta(activeBlock);
-    updateNavigationState();
+}
+
+function requestRenderActiveBlock() {
+    if (pendingRenderFrame !== 0) {
+        return;
+    }
+
+    pendingRenderFrame = requestAnimationFrame(() => {
+        pendingRenderFrame = 0;
+        renderActiveBlock();
+    });
 }
 
 function setActiveIndex(index) {
@@ -388,14 +465,19 @@ function setActiveIndex(index) {
     activeIndex = index;
     activeBlock = selectBlock(activeBlockJson, activeIndex);
     updateHeightData(activeBlock);
+    updateBlockMeta(activeBlock);
+    updateNavigationState();
     renderActiveBlock();
 }
 
 async function startGeneration() {
     const generatorOptions = readGeneratorOptions();
 
-    startButton.disabled = true;
-    setStatus('Generating...');
+    setGenerationBusy(true);
+    setStatus(
+        `Generating blocks... Timeout after ${formatDuration(GENERATION_TIMEOUT_MS)}.`,
+        'loading'
+    );
 
     try {
         const generatedJson = await generateBlockJson(generatorOptions);
@@ -406,14 +488,16 @@ async function startGeneration() {
         if (activeBlockJson.blocks.length === 0) {
             updateBlockMeta(null);
             updateNavigationState();
-            setStatus('No blocks were generated.');
+            setStatus('No blocks were generated.', 'warning');
             return;
         }
 
         setActiveIndex(0);
-        setStatus(`Generated ${activeBlockJson.blocks.length} blocks.`);
+        setStatus(`Generated ${activeBlockJson.blocks.length} blocks.`, 'success');
+    } catch (error) {
+        setGenerationErrorStatus(error);
     } finally {
-        startButton.disabled = false;
+        setGenerationBusy(false);
     }
 }
 
@@ -422,7 +506,7 @@ function requestGenerationStart() {
         return;
     }
 
-    startGeneration().catch((error) => setStatus(error.message));
+    startGeneration().catch((error) => setGenerationErrorStatus(error));
 }
 
 function moveBlock(offset) {
@@ -440,10 +524,11 @@ function moveBlock(offset) {
 
 function downloadImage() {
     if (!activeBlock) {
-        setStatus('Generate a block before saving JPG.');
+        setStatus('Generate a block before saving JPG.', 'warning');
         return false;
     }
 
+    renderActiveBlock();
     renderer.downloadJpeg(`block-${activeBlock.index}.jpg`);
     return true;
 }
@@ -467,9 +552,12 @@ function bindGeneratorEvents() {
 
 function bindRenderEvents() {
     resetRenderButton.addEventListener('click', resetRenderOptions);
-    controls.backgroundColor.addEventListener('input', renderActiveBlock);
-    controls.blockColor.addEventListener('input', renderActiveBlock);
-    controls.edgeColor.addEventListener('input', renderActiveBlock);
+
+    for (const name of ['backgroundColor', 'blockColor', 'edgeColor']) {
+        controls[name].addEventListener('input', requestRenderActiveBlock);
+        controls[name].addEventListener('change', renderActiveBlock);
+    }
+
     controls.lightFollowsCamera.addEventListener('change', () => {
         updateLightPositionControlState();
         renderActiveBlock();

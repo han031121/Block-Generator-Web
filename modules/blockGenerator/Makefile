@@ -5,8 +5,8 @@ TARGET := bin/blockGenerator.exe
 SRCS := src/main.cpp src/blockData.cpp src/blockJson.cpp
 WASM_SRCS := src/wasm.cpp src/blockData.cpp src/blockJson.cpp
 HEADERS := include/blockData.hpp include/blockJson.hpp
-INPUT := fixtures/input/test_input.json
-OUTPUT := fixtures/output/test_output.json
+INPUT := fixtures/input/sample_input.json
+OUTPUT := fixtures/output/sample_output.json
 WASM_OUT_DIR := ../../apps/web/public/generated
 WASM_JS := $(WASM_OUT_DIR)/blockGenerator.js
 
@@ -17,7 +17,7 @@ WASM_FLAGS := \
 	-sEXPORT_NAME=createBlockGeneratorModule \
 	-sEXPORTED_FUNCTIONS=['_generate_blocks_json','_free_generated_string'] \
 	-sEXPORTED_RUNTIME_METHODS=['UTF8ToString','cwrap'] \
-	-sALLOW_MEMORY_GROWTH=1 \
+	-sINITIAL_MEMORY=128MB \
 	-sFILESYSTEM=0
 
 .PHONY: all clean run wasm wasm-clean

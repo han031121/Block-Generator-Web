@@ -9,7 +9,7 @@ const DEFAULT_BLOCK_JSON_PATH = path.resolve(
     'blockGenerator',
     'fixtures',
     'output',
-    'test_output.json'
+    'sample_output.json'
 );
 
 function assertObject(value, name) {

@@ -135,7 +135,7 @@ export function normalizeBlockJsonData(data) {
 
     return {
         input: data.input ?? null,
-        blocks: data.blocks
+        blocks: data.blocks.filter((block) => block?.generated !== false)
     };
 }
 
