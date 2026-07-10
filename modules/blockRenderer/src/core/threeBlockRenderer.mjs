@@ -49,24 +49,43 @@ function getFallbackCenter(cubes) {
 }
 
 function disposeGroup(group) {
+    disposeObjectResources(group);
+    group.clear();
+}
+
+function disposeObject(object) {
+    if (!object) {
+        return;
+    }
+
+    disposeObjectResources(object);
+
+    if (object.parent) {
+        object.parent.remove(object);
+    }
+
+    if (typeof object.clear === 'function') {
+        object.clear();
+    }
+}
+
+function disposeObjectResources(object) {
     const geometries = new Set();
     const materials = new Set();
 
-    group.traverse((object) => {
-        if (object.geometry) {
-            geometries.add(object.geometry);
+    object.traverse((child) => {
+        if (child.geometry) {
+            geometries.add(child.geometry);
         }
 
-        if (Array.isArray(object.material)) {
-            for (const material of object.material) {
+        if (Array.isArray(child.material)) {
+            for (const material of child.material) {
                 materials.add(material);
             }
-        } else if (object.material) {
-            materials.add(object.material);
+        } else if (child.material) {
+            materials.add(child.material);
         }
     });
-
-    group.clear();
 
     for (const geometry of geometries) {
         geometry.dispose();
@@ -89,6 +108,42 @@ function edgeKey(start, end) {
     const startKey = pointKey(start);
     const endKey = pointKey(end);
     return startKey < endKey ? `${startKey}|${endKey}` : `${endKey}|${startKey}`;
+}
+
+function getBlockGeometryKey(block) {
+    const size = block.size
+        ? `${block.size.r},${block.size.c},${block.size.h}`
+        : '';
+    const center = block.center
+        ? `${block.center.r},${block.center.c},${block.center.h}`
+        : '';
+    const cubeKeys = block.cubes
+        .map((cube) => `${cube.r},${cube.c},${cube.h}`)
+        .join('|');
+
+    return `${block.index ?? ''}|${size}|${center}|${cubeKeys}`;
+}
+
+function getCameraStateKey(options) {
+    return [
+        options.cameraDistance,
+        options.cameraAzimuthDeg,
+        options.cameraElevationDeg,
+        options.fitScale
+    ].join('|');
+}
+
+function getEdgeOverlayViewKey(options) {
+    return [
+        options.cameraAzimuthDeg,
+        options.cameraElevationDeg
+    ].join('|');
+}
+
+function getBlockTarget(block) {
+    return block.center
+        ? blockCenterToVector(block.center)
+        : getFallbackCenter(block.cubes);
 }
 
 function addEdge(edges, edgeSet, start, end, offset) {
@@ -210,6 +265,13 @@ export class ThreeBlockRenderer {
             this.options.directionalLightIntensity
         );
         this.directionalLight.target = this.lightTarget;
+        this.blockGeometryKey = null;
+        this.cameraStateKey = null;
+        this.edgeOverlayViewKey = null;
+        this.blockMaterial = null;
+        this.edgeMaterial = null;
+        this.edgeOverlay = null;
+        this.blockTarget = new THREE.Vector3();
 
         this.scene.add(this.blockGroup);
         this.scene.add(this.lightTarget);
@@ -220,21 +282,42 @@ export class ThreeBlockRenderer {
     render(block, options = {}) {
         this.options = mergeRenderOptions(options);
         this.renderer.setClearColor(this.options.backgroundColor, 1);
-        this.renderer.setSize(IMAGE_SIZE, IMAGE_SIZE, false);
 
+        if (this.canvas.width !== IMAGE_SIZE || this.canvas.height !== IMAGE_SIZE) {
+            this.renderer.setSize(IMAGE_SIZE, IMAGE_SIZE, false);
+        }
+
+        const nextBlockGeometryKey = getBlockGeometryKey(block);
+        const blockGeometryChanged = nextBlockGeometryKey !== this.blockGeometryKey;
+
+        if (blockGeometryChanged) {
+            this.rebuildBlockGroup(block);
+            this.blockGeometryKey = nextBlockGeometryKey;
+            this.blockTarget.copy(getBlockTarget(block));
+            this.cameraStateKey = null;
+            this.edgeOverlayViewKey = null;
+        }
+
+        const nextCameraStateKey = getCameraStateKey(this.options);
+        if (nextCameraStateKey !== this.cameraStateKey) {
+            this.updateCamera(this.blockTarget);
+            this.cameraStateKey = nextCameraStateKey;
+        }
+
+        this.updateBlockMaterial();
+        this.updateEdgeOverlay(block, this.blockTarget, blockGeometryChanged);
+        this.updateLights(this.blockTarget);
+        this.renderer.render(this.scene, this.camera);
+    }
+
+    rebuildBlockGroup(block) {
         disposeGroup(this.blockGroup);
         this.scene.remove(this.blockGroup);
+
         this.blockGroup = this.createBlockMeshGroup(block);
+        this.edgeOverlay = null;
+        this.edgeMaterial = null;
         this.scene.add(this.blockGroup);
-
-        const target = block.center
-            ? blockCenterToVector(block.center)
-            : getFallbackCenter(block.cubes);
-
-        this.updateCamera(target);
-        this.blockGroup.add(this.createEdgeOverlay(block, target));
-        this.updateLights(target);
-        this.renderer.render(this.scene, this.camera);
     }
 
     createBlockMeshGroup(block) {
@@ -245,6 +328,7 @@ export class ThreeBlockRenderer {
             roughness: 0.72,
             metalness: 0
         });
+        this.blockMaterial = blockMaterial;
 
         for (const cube of block.cubes) {
             const position = new THREE.Vector3(cube.c, cube.h, cube.r);
@@ -269,6 +353,7 @@ export class ThreeBlockRenderer {
             linewidth: this.options.edgeThickness,
             worldUnits: false
         });
+        this.edgeMaterial = edgeMaterial;
 
         edgeMaterial.depthWrite = false;
         edgeMaterial.resolution.set(IMAGE_SIZE, IMAGE_SIZE);
@@ -276,6 +361,40 @@ export class ThreeBlockRenderer {
         const edgeOverlay = new LineSegments2(lineGeometry, edgeMaterial);
         edgeOverlay.renderOrder = 10;
         return edgeOverlay;
+    }
+
+    updateBlockMaterial() {
+        if (!this.blockMaterial) {
+            return;
+        }
+
+        this.blockMaterial.color.set(this.options.blockColor);
+    }
+
+    updateEdgeMaterial() {
+        if (!this.edgeMaterial) {
+            return;
+        }
+
+        this.edgeMaterial.color.set(this.options.edgeColor);
+        this.edgeMaterial.linewidth = this.options.edgeThickness;
+        this.edgeMaterial.resolution.set(IMAGE_SIZE, IMAGE_SIZE);
+    }
+
+    updateEdgeOverlay(block, target, forceRebuild = false) {
+        const nextEdgeOverlayViewKey = getEdgeOverlayViewKey(this.options);
+        const shouldRebuild = forceRebuild ||
+            !this.edgeOverlay ||
+            nextEdgeOverlayViewKey !== this.edgeOverlayViewKey;
+
+        if (shouldRebuild) {
+            disposeObject(this.edgeOverlay);
+            this.edgeOverlay = this.createEdgeOverlay(block, target);
+            this.edgeOverlayViewKey = nextEdgeOverlayViewKey;
+            this.blockGroup.add(this.edgeOverlay);
+        }
+
+        this.updateEdgeMaterial();
     }
 
     updateCamera(target) {

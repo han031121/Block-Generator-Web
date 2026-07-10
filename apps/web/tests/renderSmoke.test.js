@@ -355,6 +355,69 @@ test('runs the web generation flow and renders a nonblank Three.js canvas', {
     assert.ok(metrics.darkPixels > 50);
     assert.equal(metrics.hasJpgDataUrl, true);
 
+    const rendererReuseState = await page.evaluate(async () => {
+        const { DEFAULT_RENDER_OPTIONS, ThreeBlockRenderer } =
+            await import('/modules/blockRenderer/src/core/index.mjs');
+        const canvas = document.createElement('canvas');
+        const renderer = new ThreeBlockRenderer(canvas, DEFAULT_RENDER_OPTIONS);
+        const block = {
+            index: 1,
+            size: { r: 2, c: 2, h: 2 },
+            center: { r: 0.5, c: 0.5, h: 0.5 },
+            cubes: [
+                { r: 0, c: 0, h: 0 },
+                { r: 0, c: 1, h: 0 },
+                { r: 1, c: 0, h: 0 },
+                { r: 1, c: 1, h: 1 }
+            ]
+        };
+
+        renderer.render(block, DEFAULT_RENDER_OPTIONS);
+
+        const initialBlockGroup = renderer.blockGroup;
+        const initialBlockMaterial = renderer.blockMaterial;
+        const initialEdgeOverlay = renderer.edgeOverlay;
+        const initialEdgeMaterial = renderer.edgeMaterial;
+
+        renderer.render(block, {
+            ...DEFAULT_RENDER_OPTIONS,
+            backgroundColor: '#ffffff',
+            blockColor: '#ff0000',
+            edgeColor: '#00ff00'
+        });
+
+        const colorOnlyState = {
+            blockGroupReused: renderer.blockGroup === initialBlockGroup,
+            blockMaterialReused: renderer.blockMaterial === initialBlockMaterial,
+            edgeOverlayReused: renderer.edgeOverlay === initialEdgeOverlay,
+            edgeMaterialReused: renderer.edgeMaterial === initialEdgeMaterial
+        };
+
+        renderer.render(block, {
+            ...DEFAULT_RENDER_OPTIONS,
+            cameraAzimuthDeg: 90
+        });
+
+        return {
+            colorOnlyState,
+            cameraState: {
+                blockGroupReused: renderer.blockGroup === initialBlockGroup,
+                edgeOverlayRebuilt: renderer.edgeOverlay !== initialEdgeOverlay
+            }
+        };
+    });
+
+    assert.deepEqual(rendererReuseState.colorOnlyState, {
+        blockGroupReused: true,
+        blockMaterialReused: true,
+        edgeOverlayReused: true,
+        edgeMaterialReused: true
+    });
+    assert.deepEqual(rendererReuseState.cameraState, {
+        blockGroupReused: true,
+        edgeOverlayRebuilt: true
+    });
+
     await page.evaluate(() => {
         const originalClick = HTMLAnchorElement.prototype.click;
         window.__downloadClicks = [];

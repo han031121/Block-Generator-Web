@@ -72,6 +72,7 @@ let activeBlockJson = null;
 let activeBlock = null;
 let activeIndex = 0;
 let cameraDragState = null;
+let pendingRenderFrame = 0;
 
 function setSettingsPanelOpen(isOpen, shouldFocus = false) {
     app.classList.toggle('settings-collapsed', !isOpen);
@@ -371,13 +372,27 @@ function updateBlockMeta(block) {
 }
 
 function renderActiveBlock() {
+    if (pendingRenderFrame !== 0) {
+        cancelAnimationFrame(pendingRenderFrame);
+        pendingRenderFrame = 0;
+    }
+
     if (!activeBlock) {
         return;
     }
 
     renderer.render(activeBlock, readRenderOptions());
-    updateBlockMeta(activeBlock);
-    updateNavigationState();
+}
+
+function requestRenderActiveBlock() {
+    if (pendingRenderFrame !== 0) {
+        return;
+    }
+
+    pendingRenderFrame = requestAnimationFrame(() => {
+        pendingRenderFrame = 0;
+        renderActiveBlock();
+    });
 }
 
 function setActiveIndex(index) {
@@ -388,6 +403,8 @@ function setActiveIndex(index) {
     activeIndex = index;
     activeBlock = selectBlock(activeBlockJson, activeIndex);
     updateHeightData(activeBlock);
+    updateBlockMeta(activeBlock);
+    updateNavigationState();
     renderActiveBlock();
 }
 
@@ -444,6 +461,7 @@ function downloadImage() {
         return false;
     }
 
+    renderActiveBlock();
     renderer.downloadJpeg(`block-${activeBlock.index}.jpg`);
     return true;
 }
@@ -467,9 +485,12 @@ function bindGeneratorEvents() {
 
 function bindRenderEvents() {
     resetRenderButton.addEventListener('click', resetRenderOptions);
-    controls.backgroundColor.addEventListener('input', renderActiveBlock);
-    controls.blockColor.addEventListener('input', renderActiveBlock);
-    controls.edgeColor.addEventListener('input', renderActiveBlock);
+
+    for (const name of ['backgroundColor', 'blockColor', 'edgeColor']) {
+        controls[name].addEventListener('input', requestRenderActiveBlock);
+        controls[name].addEventListener('change', renderActiveBlock);
+    }
+
     controls.lightFollowsCamera.addEventListener('change', () => {
         updateLightPositionControlState();
         renderActiveBlock();
