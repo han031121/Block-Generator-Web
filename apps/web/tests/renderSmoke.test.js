@@ -130,6 +130,41 @@ test('runs the web generation flow and renders a nonblank Three.js canvas', {
     let blockPositionText = await page.textContent('#blockPosition');
     assert.equal(blockPositionText, '1 / 300');
 
+    const blockMetaState = await page.evaluate(() => {
+        const identifyBlock = document.querySelector('#blockMeta .block-identify-code');
+        const identifyCode = identifyBlock?.querySelector('code');
+        const identifyStyle = identifyBlock ? getComputedStyle(identifyBlock) : null;
+        const labels = Array.from(
+            document.querySelectorAll('#blockMeta .block-meta-label')
+        );
+        const blockDataTitle = document.querySelector('.block-data-title');
+
+        return {
+            hasIdentifyBlock: identifyBlock !== null,
+            hasIdentifyCode: identifyCode !== null,
+            identifyTextLength: identifyCode?.textContent.length ?? 0,
+            whiteSpace: identifyStyle?.whiteSpace ?? null,
+            overflowWrap: identifyStyle?.overflowWrap ?? null,
+            overflowX: identifyStyle?.overflowX ?? null,
+            labelTexts: labels.map((label) => label.textContent),
+            labelWeights: labels.map((label) => getComputedStyle(label).fontWeight),
+            blockDataTitleText: blockDataTitle?.textContent ?? null,
+            blockDataTitleWeight: blockDataTitle ?
+                getComputedStyle(blockDataTitle).fontWeight :
+                null
+        };
+    });
+    assert.equal(blockMetaState.hasIdentifyBlock, true);
+    assert.equal(blockMetaState.hasIdentifyCode, true);
+    assert.ok(blockMetaState.identifyTextLength > 0);
+    assert.equal(blockMetaState.whiteSpace, 'pre-wrap');
+    assert.equal(blockMetaState.overflowWrap, 'anywhere');
+    assert.equal(blockMetaState.overflowX, 'hidden');
+    assert.deepEqual(blockMetaState.labelTexts, ['Index', 'Cubes', 'Size', 'Identify']);
+    assert.ok(blockMetaState.labelWeights.every((weight) => Number(weight) >= 700));
+    assert.equal(blockMetaState.blockDataTitleText, 'Block data');
+    assert.ok(Number(blockMetaState.blockDataTitleWeight) >= 700);
+
     const timeoutState = await page.evaluate(async () => {
         const {
             generateBlockJson,

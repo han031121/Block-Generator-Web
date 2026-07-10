@@ -394,17 +394,43 @@ function updateNavigationState() {
 
 function updateBlockMeta(block) {
     if (!block) {
-        blockMeta.textContent = '';
+        blockMeta.replaceChildren();
         heightDataOutput.textContent = '';
         return;
     }
 
-    blockMeta.textContent = [
-        `Index ${block.index}`,
-        `Cubes ${block.cubes.length}`,
-        `Size ${block.size.r} x ${block.size.c} x ${block.size.h}`,
-        `Identify ${block.identify ?? 'null'}`
-    ].join('\n');
+    const rows = [
+        ['Index', block.index],
+        ['Cubes', block.cubes.length],
+        ['Size', `${block.size.r} x ${block.size.c} x ${block.size.h}`]
+    ].map(([label, value]) => {
+        const row = document.createElement('div');
+        const labelElement = document.createElement('strong');
+        const valueElement = document.createTextNode(` ${value}`);
+
+        row.className = 'block-meta-line';
+        labelElement.className = 'block-meta-label';
+        labelElement.textContent = label;
+        row.append(labelElement, valueElement);
+        return row;
+    });
+
+    const identifyLabel = document.createElement('div');
+    const identifyLabelText = document.createElement('strong');
+
+    identifyLabel.className = 'block-meta-line';
+    identifyLabelText.className = 'block-meta-label';
+    identifyLabelText.textContent = 'Identify';
+    identifyLabel.append(identifyLabelText);
+
+    const identifyCode = document.createElement('code');
+    identifyCode.textContent = block.identify ?? 'null';
+
+    const identifyBlock = document.createElement('pre');
+    identifyBlock.className = 'block-identify-code';
+    identifyBlock.append(identifyCode);
+
+    blockMeta.replaceChildren(...rows, identifyLabel, identifyBlock);
 }
 
 function renderActiveBlock() {

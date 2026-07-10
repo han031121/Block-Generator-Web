@@ -347,14 +347,40 @@ canvas:focus-visible {
 }
 
 .block-meta {
+    min-width: 0;
     min-height: 48px;
     display: grid;
     align-content: center;
-    gap: 2px;
+    gap: 6px;
     color: #44544f;
     font-size: 13px;
     line-height: 1.45;
-    white-space: pre-line;
+}
+
+.block-meta-line {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.block-meta-label,
+.block-data-title {
+    color: #23312d;
+    font-weight: 800;
+}
+
+.block-data-title {
+    font-size: 13px;
+}
+
+.block-identify-code {
+    min-width: 0;
+    min-height: 0;
+    max-height: min(180px, 24dvh);
+    white-space: pre-wrap;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 pre {
