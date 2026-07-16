@@ -1,9 +1,47 @@
+@font-face {
+    font-family: "Pretendard Variable";
+    src: url("../../fonts/PretendardVariable.woff2") format("woff2-variations");
+    font-style: normal;
+    font-weight: 45 920;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Pretendard JP Variable";
+    src: url("../../fonts/PretendardJPVariable.woff2") format("woff2-variations");
+    font-style: normal;
+    font-weight: 45 920;
+    font-display: swap;
+}
+
 :root {
     --settings-panel-width: clamp(320px, 31vw, 400px);
+    --font-family-latin:
+        "Pretendard Variable", Pretendard, Inter, ui-sans-serif, system-ui,
+        -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --font-family-korean:
+        "Pretendard Variable", Pretendard, "Noto Sans KR", "Noto Sans CJK KR",
+        "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+    --font-family-japanese:
+        "Pretendard JP Variable", "Pretendard JP", "Meiryo UI", Meiryo,
+        "Hiragino Maru Gothic ProN", "Yu Gothic UI", "Yu Gothic",
+        "Noto Sans JP", "Noto Sans CJK JP", sans-serif;
+    --font-family-ui: var(--font-family-latin);
+    --font-weight-label: 700;
+    --font-weight-strong: 700;
     color-scheme: light;
-    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-family: var(--font-family-ui);
+    font-synthesis: none;
     background: #e6ecea;
     color: #17201d;
+}
+
+:root:lang(ko) {
+    --font-family-ui: var(--font-family-korean);
+}
+
+:root:lang(ja) {
+    --font-family-ui: var(--font-family-japanese);
 }
 
 * {
@@ -107,6 +145,102 @@ input {
     transform: rotate(180deg);
 }
 
+.language-switcher {
+    position: fixed;
+    right: 18px;
+    bottom: 18px;
+    z-index: 40;
+}
+
+.language-menu-button {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    min-height: 44px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 1px solid #bdcac6;
+    border-radius: 50%;
+    background: rgb(251 252 252 / 94%);
+    color: #2e6656;
+    box-shadow: 0 8px 24px rgb(23 32 29 / 16%);
+    backdrop-filter: blur(8px);
+}
+
+.language-menu-button:hover,
+.language-menu-button[aria-expanded="true"] {
+    border-color: #286653;
+    background: #2e735e;
+    color: #ffffff;
+}
+
+.language-menu-button svg {
+    width: 21px;
+    height: 21px;
+    display: block;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.language-menu {
+    position: absolute;
+    right: 0;
+    bottom: calc(100% + 8px);
+    min-width: 128px;
+    display: grid;
+    gap: 2px;
+    padding: 4px;
+    border: 1px solid #bdcac6;
+    border-radius: 9px;
+    background: rgb(251 252 252 / 96%);
+    box-shadow: 0 8px 24px rgb(23 32 29 / 16%);
+    backdrop-filter: blur(8px);
+}
+
+.language-menu[hidden] {
+    display: none;
+}
+
+.language-button {
+    width: 100%;
+    min-height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 0 9px;
+    border-color: transparent;
+    border-radius: 6px;
+    background: transparent;
+    color: #354540;
+    font-family: var(--font-family-latin);
+    font-size: 12px;
+    font-weight: 500;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.language-button:lang(ko) {
+    font-family: var(--font-family-korean);
+}
+
+.language-button:lang(ja) {
+    font-family: var(--font-family-japanese);
+}
+
+.language-button:hover {
+    background: #edf3f1;
+}
+
+.language-button.is-active {
+    border-color: #286653;
+    background: #2e735e;
+    color: #ffffff;
+}
+
 .header {
     min-width: 0;
     display: grid;
@@ -117,7 +251,7 @@ input {
     margin: 0;
     color: #16231f;
     font-size: 22px;
-    font-weight: 800;
+    font-weight: var(--font-weight-strong);
     letter-spacing: 0;
     overflow-wrap: anywhere;
 }
@@ -158,7 +292,7 @@ input {
     border-radius: 6px 6px 0 0;
     background: #edf3f1;
     color: #354540;
-    font-size: 13px;
+    font-size: 14px;
 }
 
 .tab-button.is-active {
@@ -190,8 +324,8 @@ input {
 .group-title {
     margin: 0;
     color: #23312d;
-    font-size: 14px;
-    font-weight: 800;
+    font-size: 15px;
+    font-weight: var(--font-weight-strong);
 }
 
 .group-heading-row {
@@ -219,7 +353,7 @@ label {
     gap: 6px;
     color: #354540;
     font-size: 13px;
-    font-weight: 650;
+    font-weight: var(--font-weight-label);
 }
 
 input[type="text"],
@@ -283,7 +417,7 @@ button {
     border-radius: 6px;
     background: #2e735e;
     color: #ffffff;
-    font-weight: 800;
+    font-weight: var(--font-weight-strong);
     cursor: pointer;
 }
 
@@ -357,7 +491,7 @@ canvas:focus-visible {
     background: #f4f7f6;
     color: #24342f;
     font-size: 13px;
-    font-weight: 800;
+    font-weight: var(--font-weight-strong);
 }
 
 .block-meta {
@@ -379,11 +513,11 @@ canvas:focus-visible {
 .block-meta-label,
 .block-data-title {
     color: #23312d;
-    font-weight: 800;
+    font-weight: var(--font-weight-strong);
 }
 
 .block-data-title {
-    font-size: 13px;
+    font-size: 14px;
 }
 
 .block-identify-code {
@@ -481,7 +615,7 @@ pre {
 
 .generation-overlay-text {
     font-size: 14px;
-    font-weight: 800;
+    font-weight: var(--font-weight-strong);
 }
 
 @keyframes spin {
@@ -532,6 +666,11 @@ canvas {
 
     .actions {
         grid-template-columns: 1fr;
+    }
+
+    .language-switcher {
+        right: 12px;
+        bottom: 12px;
     }
 }
 

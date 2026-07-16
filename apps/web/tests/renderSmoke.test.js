@@ -22,7 +22,29 @@ test('runs the web generation flow and renders a nonblank Three.js canvas', {
     });
     t.after(() => browser.close());
 
-    const page = await browser.newPage({ viewport: { width: 1280, height: 920 } });
+    const page = await browser.newPage({
+        locale: 'en-US',
+        viewport: { width: 1280, height: 920 }
+    });
+    const fontClient = await page.context().newCDPSession(page);
+    await fontClient.send('DOM.enable');
+    await fontClient.send('CSS.enable');
+
+    const readPlatformFonts = async (selector) => {
+        const { root } = await fontClient.send('DOM.getDocument');
+        const { nodeId } = await fontClient.send('DOM.querySelector', {
+            nodeId: root.nodeId,
+            selector
+        });
+        const { fonts } = await fontClient.send('CSS.getPlatformFontsForNode', {
+            nodeId
+        });
+
+        return fonts.map((font) => ({
+            familyName: font.familyName,
+            postScriptName: font.postScriptName
+        }));
+    };
     await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: 'networkidle' });
 
     const readLayoutState = async () => page.evaluate(() => {
@@ -57,6 +79,84 @@ test('runs the web generation flow and renders a nonblank Three.js canvas', {
     assert.equal(layoutState.toggleLabel, 'Hide settings');
     assert.equal(layoutState.canvasInsideViewport, true);
     assert.equal(layoutState.canvasWidth, layoutState.canvasHeight);
+
+    let languageState = await page.evaluate(() => {
+        const switcher = document.querySelector('#languageSwitcher');
+        const rect = switcher.getBoundingClientRect();
+        const menu = document.querySelector('#languageMenu');
+        const menuButton = document.querySelector('#languageMenuButton');
+
+        return {
+            locale: document.documentElement.lang,
+            position: getComputedStyle(switcher).position,
+            rightGap: window.innerWidth - rect.right,
+            bottomGap: window.innerHeight - rect.bottom,
+            menuHidden: menu.hidden,
+            menuRole: menu.getAttribute('role'),
+            menuExpanded: menuButton.getAttribute('aria-expanded'),
+            menuButtonText: menuButton.innerText.trim(),
+            hasGlobeIcon: menuButton.querySelector('svg') !== null,
+            optionRoles: Array.from(menu.querySelectorAll('[data-locale]'))
+                .map((button) => button.getAttribute('role')),
+            pressedLocales: Array.from(
+                document.querySelectorAll('.language-button[aria-checked="true"]')
+            ).map((button) => button.dataset.locale)
+        };
+    });
+    assert.deepEqual(languageState, {
+        locale: 'en',
+        position: 'fixed',
+        rightGap: 18,
+        bottomGap: 18,
+        menuHidden: true,
+        menuRole: 'menu',
+        menuExpanded: 'false',
+        menuButtonText: '',
+        hasGlobeIcon: true,
+        optionRoles: ['menuitemradio', 'menuitemradio', 'menuitemradio'],
+        pressedLocales: ['en']
+    });
+
+    await page.click('#languageMenuButton');
+    assert.equal(await page.locator('#languageMenu').getAttribute('hidden'), null);
+    assert.equal(
+        await page.locator('#languageMenuButton').getAttribute('aria-expanded'),
+        'true'
+    );
+    await page.keyboard.press('Escape');
+    assert.equal(await page.locator('#languageMenu').getAttribute('hidden'), '');
+    assert.equal(
+        await page.evaluate(() => document.activeElement?.id),
+        'languageMenuButton'
+    );
+
+    const selectLocale = async (locale) => {
+        await page.click('#languageMenuButton');
+        await page.click(`.language-button[data-locale="${locale}"]`);
+        assert.equal(await page.locator('#languageMenu').getAttribute('hidden'), '');
+        assert.equal(
+            await page.locator('#languageMenuButton').getAttribute('aria-expanded'),
+            'false'
+        );
+    };
+
+    const initialFontState = await page.evaluate(() => ({
+        fontSynthesis: getComputedStyle(document.documentElement).fontSynthesis,
+        koreanButtonFont: getComputedStyle(
+            document.querySelector('.language-button[lang="ko"]')
+        ).fontFamily,
+        japaneseButtonFont: getComputedStyle(
+            document.querySelector('.language-button[lang="ja"]')
+        ).fontFamily,
+        languageButtonWeights: Array.from(
+            document.querySelectorAll('.language-button'),
+            (button) => getComputedStyle(button).fontWeight
+        )
+    }));
+    assert.equal(initialFontState.fontSynthesis, 'none');
+    assert.match(initialFontState.koreanButtonFont, /Pretendard Variable/);
+    assert.match(initialFontState.japaneseButtonFont, /Pretendard JP Variable/);
+    assert.deepEqual(initialFontState.languageButtonWeights, ['500', '500', '500']);
 
     const iconButtonState = await page.evaluate(() => {
         const panelRect = document.querySelector('#settingsPanel')
@@ -169,10 +269,168 @@ test('runs the web generation flow and renders a nonblank Three.js canvas', {
     assert.equal(blockMetaState.whiteSpace, 'pre-wrap');
     assert.equal(blockMetaState.overflowWrap, 'anywhere');
     assert.equal(blockMetaState.overflowX, 'hidden');
-    assert.deepEqual(blockMetaState.labelTexts, ['Index', 'Cubes', 'Size', 'Identify']);
+    assert.deepEqual(blockMetaState.labelTexts, ['Index', 'Cubes', 'Size', 'ID']);
     assert.ok(blockMetaState.labelWeights.every((weight) => Number(weight) >= 700));
     assert.equal(blockMetaState.blockDataTitleText, 'Block data');
     assert.ok(Number(blockMetaState.blockDataTitleWeight) >= 700);
+
+    const readTranslatedUiState = async () => page.evaluate(() => ({
+        locale: document.documentElement.lang,
+        title: document.title,
+        generationTab: document.querySelector('#generationTab').textContent.trim(),
+        generateCountLabel: document.querySelector(
+            '[data-i18n="generation.generateCount"]'
+        ).textContent,
+        statusText: document.querySelector('#status').textContent,
+        settingsLabel: document.querySelector('#settingsPanel').getAttribute('aria-label'),
+        metaLabels: Array.from(
+            document.querySelectorAll('#blockMeta .block-meta-label')
+        ).map((label) => label.textContent),
+        pressedLocales: Array.from(
+            document.querySelectorAll('.language-button[aria-checked="true"]')
+        ).map((button) => button.dataset.locale)
+    }));
+    const readLocalizedFontState = async () => page.evaluate(() => {
+        const rootStyle = getComputedStyle(document.documentElement);
+        const brandStyle = getComputedStyle(document.querySelector('.brand'));
+        const tabStyle = getComputedStyle(document.querySelector('.tab-button'));
+        const groupTitleStyle = getComputedStyle(
+            document.querySelector('.group-title')
+        );
+        const blockDataTitleStyle = getComputedStyle(
+            document.querySelector('.block-data-title')
+        );
+
+        return {
+            fontFamily: rootStyle.fontFamily,
+            fontSynthesis: rootStyle.fontSynthesis,
+            rootWeight: rootStyle.fontWeight,
+            brandWeight: brandStyle.fontWeight,
+            tabFontSize: tabStyle.fontSize,
+            groupTitleFontSize: groupTitleStyle.fontSize,
+            blockDataTitleFontSize: blockDataTitleStyle.fontSize,
+            languageButtonWeights: Array.from(
+                document.querySelectorAll('.language-button'),
+                (button) => getComputedStyle(button).fontWeight
+            )
+        };
+    });
+
+    await selectLocale('ko');
+    languageState = await readTranslatedUiState();
+    assert.deepEqual(languageState, {
+        locale: 'ko',
+        title: '블록 생성기',
+        generationTab: '생성',
+        generateCountLabel: '생성 개수',
+        statusText: '블록 300개를 생성했습니다.',
+        settingsLabel: '설정',
+        metaLabels: ['인덱스', '큐브', '크기', 'ID'],
+        pressedLocales: ['ko']
+    });
+    let localizedFontState = await readLocalizedFontState();
+    assert.match(localizedFontState.fontFamily, /^"Pretendard Variable"/);
+    assert.equal(localizedFontState.fontSynthesis, 'none');
+    assert.equal(localizedFontState.rootWeight, '400');
+    assert.equal(localizedFontState.brandWeight, '700');
+    assert.equal(localizedFontState.tabFontSize, '14px');
+    assert.equal(localizedFontState.groupTitleFontSize, '15px');
+    assert.equal(localizedFontState.blockDataTitleFontSize, '14px');
+    assert.deepEqual(localizedFontState.languageButtonWeights, ['500', '500', '500']);
+    assert.deepEqual(
+        await readPlatformFonts(
+            '#generationPanel .control-group:nth-child(2) .group-title'
+        ),
+        [{
+            familyName: 'Pretendard Variable',
+            postScriptName: 'PretendardVariable-Bold'
+        }]
+    );
+    assert.deepEqual(
+        await readPlatformFonts('#status'),
+        [{
+            familyName: 'Pretendard Variable',
+            postScriptName: 'PretendardVariable'
+        }]
+    );
+    assert.equal(new URL(page.url()).searchParams.get('lang'), 'ko');
+    await page.screenshot({
+        path: path.join(os.tmpdir(), 'block-generator-web-ko.png'),
+        fullPage: true
+    });
+
+    await selectLocale('ja');
+    languageState = await readTranslatedUiState();
+    assert.deepEqual(languageState, {
+        locale: 'ja',
+        title: 'ブロックジェネレーター',
+        generationTab: '生成',
+        generateCountLabel: '生成数',
+        statusText: '300個のブロックを生成しました。',
+        settingsLabel: '設定',
+        metaLabels: ['インデックス', 'キューブ数', 'サイズ', 'ID'],
+        pressedLocales: ['ja']
+    });
+    localizedFontState = await readLocalizedFontState();
+    assert.match(localizedFontState.fontFamily, /^"Pretendard JP Variable"/);
+    assert.equal(localizedFontState.fontSynthesis, 'none');
+    assert.equal(localizedFontState.rootWeight, '400');
+    assert.equal(localizedFontState.brandWeight, '700');
+    assert.equal(localizedFontState.tabFontSize, '14px');
+    assert.equal(localizedFontState.groupTitleFontSize, '15px');
+    assert.equal(localizedFontState.blockDataTitleFontSize, '14px');
+    assert.deepEqual(localizedFontState.languageButtonWeights, ['500', '500', '500']);
+    assert.deepEqual(
+        await readPlatformFonts(
+            '#generationPanel .control-group:nth-child(2) .group-title'
+        ),
+        [{
+            familyName: 'Pretendard JP Variable',
+            postScriptName: 'PretendardJPVariable-Bold'
+        }]
+    );
+    await page.screenshot({
+        path: path.join(os.tmpdir(), 'block-generator-web-ja.png'),
+        fullPage: true
+    });
+
+    await selectLocale('en');
+    languageState = await readTranslatedUiState();
+    assert.deepEqual(languageState, {
+        locale: 'en',
+        title: 'Block Generator',
+        generationTab: 'Generation',
+        generateCountLabel: 'Generate count',
+        statusText: 'Generated 300 blocks.',
+        settingsLabel: 'Settings',
+        metaLabels: ['Index', 'Cubes', 'Size', 'ID'],
+        pressedLocales: ['en']
+    });
+    localizedFontState = await readLocalizedFontState();
+    assert.match(localizedFontState.fontFamily, /^"Pretendard Variable"/);
+    assert.equal(localizedFontState.fontSynthesis, 'none');
+    assert.equal(localizedFontState.rootWeight, '400');
+    assert.equal(localizedFontState.brandWeight, '700');
+    assert.equal(localizedFontState.tabFontSize, '14px');
+    assert.equal(localizedFontState.groupTitleFontSize, '15px');
+    assert.equal(localizedFontState.blockDataTitleFontSize, '14px');
+    assert.deepEqual(localizedFontState.languageButtonWeights, ['500', '500', '500']);
+    assert.deepEqual(
+        await readPlatformFonts(
+            '#generationPanel .control-group:nth-child(2) .group-title'
+        ),
+        [{
+            familyName: 'Pretendard Variable',
+            postScriptName: 'PretendardVariable-Bold'
+        }]
+    );
+    assert.deepEqual(
+        await readPlatformFonts('#status'),
+        [{
+            familyName: 'Pretendard Variable',
+            postScriptName: 'PretendardVariable'
+        }]
+    );
 
     const timeoutState = await page.evaluate(async () => {
         const {

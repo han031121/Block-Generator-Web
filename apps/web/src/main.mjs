@@ -11,6 +11,12 @@ import {
     normalizeBlockJsonData,
     selectBlock
 } from './api/blockJsonBrowser.mjs';
+import {
+    getLocale,
+    setLocale,
+    t,
+    translateDocument
+} from './i18n/index.mjs';
 
 const app = document.querySelector('.app');
 const settingsPanel = document.querySelector('#settingsPanel');
@@ -30,6 +36,10 @@ const prevButton = document.querySelector('#prevButton');
 const nextButton = document.querySelector('#nextButton');
 const downloadButton = document.querySelector('#downloadButton');
 const resetRenderButton = document.querySelector('#resetRenderButton');
+const languageSwitcher = document.querySelector('#languageSwitcher');
+const languageMenuButton = document.querySelector('#languageMenuButton');
+const languageMenu = document.querySelector('#languageMenu');
+const languageButtons = Array.from(document.querySelectorAll('[data-locale]'));
 const generatorControls = {
     generateCount: document.querySelector('#generateCount'),
     blockCountMin: document.querySelector('#blockCountMin'),
@@ -70,7 +80,15 @@ const valueControls = {
 const LIGHT_POSITION_CONTROL_NAMES = ['lightAzimuthDeg', 'lightElevationDeg'];
 const CAMERA_DRAG_SENSITIVITY_DEG = 0.35;
 const CAMERA_WHEEL_DISTANCE_STEP = 0.5;
-const START_BUTTON_IDLE_LABEL = startButton.textContent;
+
+class LocalizedError extends Error {
+    constructor(translationKey, params = {}) {
+        super(translationKey);
+        this.name = 'LocalizedError';
+        this.translationKey = translationKey;
+        this.translationParams = params;
+    }
+}
 
 const renderer = new ThreeBlockRenderer(canvas, DEFAULT_RENDER_OPTIONS);
 let activeBlockJson = null;
@@ -78,6 +96,12 @@ let activeBlock = null;
 let activeIndex = 0;
 let cameraDragState = null;
 let pendingRenderFrame = 0;
+let isGenerationBusy = false;
+let currentStatus = {
+    key: 'status.ready',
+    params: {},
+    state: 'idle'
+};
 
 function setSettingsPanelOpen(isOpen, shouldFocus = false) {
     app.classList.toggle('settings-collapsed', !isOpen);
@@ -85,7 +109,7 @@ function setSettingsPanelOpen(isOpen, shouldFocus = false) {
     settingsToggleButton.setAttribute('aria-expanded', String(isOpen));
     settingsToggleButton.setAttribute(
         'aria-label',
-        isOpen ? 'Hide settings' : 'Show settings'
+        t(isOpen ? 'settings.hide' : 'settings.show')
     );
 
     if (shouldFocus || (!isOpen && settingsPanel.contains(document.activeElement))) {
@@ -161,18 +185,28 @@ function bindSettingsShellEvents() {
     }
 }
 
-function formatDuration(milliseconds) {
-    return `${milliseconds / 1000} seconds`;
+function renderCurrentStatus() {
+    const params = { ...currentStatus.params };
+    if (params.labelKey) {
+        params.label = t(params.labelKey);
+        delete params.labelKey;
+    }
+
+    status.textContent = t(currentStatus.key, params);
+    status.dataset.state = currentStatus.state;
 }
 
-function setStatus(message, state = 'idle') {
-    status.textContent = message;
-    status.dataset.state = state;
+function setStatus(key, params = {}, state = 'idle') {
+    currentStatus = { key, params, state };
+    renderCurrentStatus();
 }
 
 function setGenerationBusy(isBusy) {
+    isGenerationBusy = isBusy;
     startButton.disabled = isBusy;
-    startButton.textContent = isBusy ? 'Generating...' : START_BUTTON_IDLE_LABEL;
+    startButton.textContent = t(
+        isBusy ? 'generation.generating' : 'generation.start'
+    );
     generatorForm.classList.toggle('is-generating', isBusy);
     generatorForm.setAttribute('aria-busy', String(isBusy));
     canvasWrap.classList.toggle('is-generating', isBusy);
@@ -185,55 +219,70 @@ function setGenerationErrorStatus(error) {
     if (isBlockGenerationTimeoutError(error)) {
         const timeoutMs = error.timeoutMs ?? GENERATION_TIMEOUT_MS;
         setStatus(
-            `Generation timed out after ${formatDuration(timeoutMs)}. ` +
-                'Reduce block count or increase Rows, Columns, or Height.',
+            'errors.timeout',
+            { seconds: timeoutMs / 1000 },
             'error'
         );
         return;
     }
 
-    setStatus(error.message, 'error');
+    if (error instanceof LocalizedError) {
+        setStatus(error.translationKey, error.translationParams, 'error');
+        return;
+    }
+
+    console.error(error);
+    setStatus('errors.generationFailed', {}, 'error');
 }
 
-function readIntegerInput(control, label) {
+function readIntegerInput(control, labelKey) {
     const value = Number(control.value);
     const min = Number(control.min);
     const max = Number(control.max);
 
     if (!Number.isInteger(value) || value < min || value > max) {
-        throw new Error(`${label} is outside the allowed range.`);
+        throw new LocalizedError('errors.outOfRange', { labelKey });
     }
 
     return value;
 }
 
-function readNumberInput(control, label) {
+function readNumberInput(control, labelKey) {
     const value = Number(control.value);
     const min = Number(control.min);
     const max = Number(control.max);
 
     if (!Number.isFinite(value) || value < min || value > max) {
-        throw new Error(`${label} is outside the allowed range.`);
+        throw new LocalizedError('errors.outOfRange', { labelKey });
     }
 
     return value;
 }
 
 function readGeneratorOptions() {
-    const generateCount = readIntegerInput(generatorControls.generateCount, 'Generate count');
-    const blockCountMin = readIntegerInput(generatorControls.blockCountMin, 'Block count min');
-    const blockCountMax = readIntegerInput(generatorControls.blockCountMax, 'Block count max');
-    const maxRows = readIntegerInput(generatorControls.maxRows, 'Rows');
-    const maxCols = readIntegerInput(generatorControls.maxCols, 'Columns');
-    const maxHeight = readIntegerInput(generatorControls.maxHeight, 'Height');
+    const generateCount = readIntegerInput(
+        generatorControls.generateCount,
+        'generation.generateCount'
+    );
+    const blockCountMin = readIntegerInput(
+        generatorControls.blockCountMin,
+        'generation.blockCountMin'
+    );
+    const blockCountMax = readIntegerInput(
+        generatorControls.blockCountMax,
+        'generation.blockCountMax'
+    );
+    const maxRows = readIntegerInput(generatorControls.maxRows, 'generation.rows');
+    const maxCols = readIntegerInput(generatorControls.maxCols, 'generation.columns');
+    const maxHeight = readIntegerInput(generatorControls.maxHeight, 'generation.height');
     const capacity = maxRows * maxCols * maxHeight;
 
     if (blockCountMin > blockCountMax) {
-        throw new Error('Block count min cannot be greater than block count max.');
+        throw new LocalizedError('errors.minGreaterThanMax');
     }
 
     if (blockCountMax > capacity) {
-        throw new Error(`Block count max cannot exceed the current capacity ${capacity}.`);
+        throw new LocalizedError('errors.exceedsCapacity', { capacity });
     }
 
     return {
@@ -243,7 +292,7 @@ function readGeneratorOptions() {
         max_r: maxRows,
         max_c: maxCols,
         max_h: maxHeight,
-        density: readNumberInput(generatorControls.density, 'Density'),
+        density: readNumberInput(generatorControls.density, 'generation.density'),
         allow_duplicate: generatorControls.allowDuplicate.checked
     };
 }
@@ -395,17 +444,17 @@ function updateBlockMeta(block) {
     }
 
     const rows = [
-        ['Index', block.index],
-        ['Cubes', block.cubes.length],
-        ['Size', `${block.size.r} x ${block.size.c} x ${block.size.h}`]
-    ].map(([label, value]) => {
+        ['blockMeta.index', block.index],
+        ['blockMeta.cubes', block.cubes.length],
+        ['blockMeta.size', `${block.size.r} x ${block.size.c} x ${block.size.h}`]
+    ].map(([labelKey, value]) => {
         const row = document.createElement('div');
         const labelElement = document.createElement('strong');
         const valueElement = document.createTextNode(` ${value}`);
 
         row.className = 'block-meta-line';
         labelElement.className = 'block-meta-label';
-        labelElement.textContent = label;
+        labelElement.textContent = t(labelKey);
         row.append(labelElement, valueElement);
         return row;
     });
@@ -415,7 +464,7 @@ function updateBlockMeta(block) {
 
     identifyLabel.className = 'block-meta-line';
     identifyLabelText.className = 'block-meta-label';
-    identifyLabelText.textContent = 'Identify';
+    identifyLabelText.textContent = t('blockMeta.id');
     identifyLabel.append(identifyLabelText);
 
     const identifyCode = document.createElement('code');
@@ -470,7 +519,8 @@ async function startGeneration() {
 
     setGenerationBusy(true);
     setStatus(
-        `Generating blocks... Timeout after ${formatDuration(GENERATION_TIMEOUT_MS)}.`,
+        'status.generating',
+        { seconds: GENERATION_TIMEOUT_MS / 1000 },
         'loading'
     );
 
@@ -483,12 +533,16 @@ async function startGeneration() {
         if (activeBlockJson.blocks.length === 0) {
             updateBlockMeta(null);
             updateNavigationState();
-            setStatus('No blocks were generated.', 'warning');
+            setStatus('status.noBlocks', {}, 'warning');
             return;
         }
 
         setActiveIndex(0);
-        setStatus(`Generated ${activeBlockJson.blocks.length} blocks.`, 'success');
+        setStatus(
+            'status.generated',
+            { count: activeBlockJson.blocks.length },
+            'success'
+        );
     } catch (error) {
         setGenerationErrorStatus(error);
     } finally {
@@ -519,7 +573,7 @@ function moveBlock(offset) {
 
 function downloadImage() {
     if (!activeBlock) {
-        setStatus('Generate a block before saving JPG.', 'warning');
+        setStatus('status.saveBeforeGeneration', {}, 'warning');
         return false;
     }
 
@@ -542,6 +596,116 @@ function bindGeneratorEvents() {
     });
     generatorValueControls.density.addEventListener('input', () => {
         syncGeneratorNumberToRange('density');
+    });
+}
+
+function applyLocale() {
+    const locale = getLocale();
+    document.documentElement.lang = locale;
+    document.title = t('app.title');
+    translateDocument();
+
+    for (const button of languageButtons) {
+        const isActive = button.dataset.locale === locale;
+        button.classList.toggle('is-active', isActive);
+        button.setAttribute('aria-checked', String(isActive));
+    }
+
+    const settingsOpen = settingsToggleButton.getAttribute('aria-expanded') === 'true';
+    settingsToggleButton.setAttribute(
+        'aria-label',
+        t(settingsOpen ? 'settings.hide' : 'settings.show')
+    );
+    setGenerationBusy(isGenerationBusy);
+    renderCurrentStatus();
+
+    if (activeBlock) {
+        updateBlockMeta(activeBlock);
+    }
+}
+
+function setLanguageMenuOpen(isOpen, focusTarget = null) {
+    languageMenu.hidden = !isOpen;
+    languageMenuButton.setAttribute('aria-expanded', String(isOpen));
+
+    if (!isOpen) {
+        return;
+    }
+
+    if (focusTarget === 'last') {
+        languageButtons.at(-1)?.focus();
+    } else if (focusTarget === 'active') {
+        const activeButton = languageButtons.find(
+            (button) => button.dataset.locale === getLocale()
+        );
+        (activeButton ?? languageButtons[0])?.focus();
+    }
+}
+
+function bindLanguageEvents() {
+    languageMenuButton.addEventListener('click', () => {
+        setLanguageMenuOpen(languageMenu.hidden);
+    });
+    languageMenuButton.addEventListener('keydown', (event) => {
+        if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') {
+            return;
+        }
+
+        setLanguageMenuOpen(true, event.key === 'ArrowUp' ? 'last' : 'active');
+        event.preventDefault();
+    });
+
+    for (const button of languageButtons) {
+        button.addEventListener('click', () => {
+            if (setLocale(button.dataset.locale)) {
+                applyLocale();
+            }
+            setLanguageMenuOpen(false);
+            languageMenuButton.focus();
+        });
+    }
+
+    languageMenu.addEventListener('keydown', (event) => {
+        const currentIndex = languageButtons.indexOf(document.activeElement);
+        if (currentIndex < 0) {
+            return;
+        }
+
+        let nextIndex = null;
+        if (event.key === 'ArrowDown') {
+            nextIndex = (currentIndex + 1) % languageButtons.length;
+        } else if (event.key === 'ArrowUp') {
+            nextIndex = (
+                currentIndex - 1 + languageButtons.length
+            ) % languageButtons.length;
+        } else if (event.key === 'Home') {
+            nextIndex = 0;
+        } else if (event.key === 'End') {
+            nextIndex = languageButtons.length - 1;
+        }
+
+        if (nextIndex !== null) {
+            languageButtons[nextIndex].focus();
+            event.preventDefault();
+        }
+    });
+
+    languageSwitcher.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && !languageMenu.hidden) {
+            setLanguageMenuOpen(false);
+            languageMenuButton.focus();
+            event.preventDefault();
+        }
+    });
+    languageSwitcher.addEventListener('focusout', (event) => {
+        if (!languageSwitcher.contains(event.relatedTarget)) {
+            setLanguageMenuOpen(false);
+        }
+    });
+    document.addEventListener('pointerdown', (event) => {
+        if (!languageSwitcher.contains(event.target)) {
+            setLanguageMenuOpen(false);
+        }
     });
 }
 
@@ -693,6 +857,8 @@ function bindCanvasInteractionEvents() {
 
 bindSettingsShellEvents();
 setSettingsPanelOpen(true);
+bindLanguageEvents();
+applyLocale();
 bindGeneratorEvents();
 bindRenderEvents();
 bindCanvasInteractionEvents();
