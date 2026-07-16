@@ -1,8 +1,47 @@
+@font-face {
+    font-family: "Pretendard Variable";
+    src: url("../../fonts/PretendardVariable.woff2") format("woff2-variations");
+    font-style: normal;
+    font-weight: 45 920;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Pretendard JP Variable";
+    src: url("../../fonts/PretendardJPVariable.woff2") format("woff2-variations");
+    font-style: normal;
+    font-weight: 45 920;
+    font-display: swap;
+}
+
 :root {
+    --settings-panel-width: clamp(320px, 31vw, 400px);
+    --font-family-latin:
+        "Pretendard Variable", Pretendard, Inter, ui-sans-serif, system-ui,
+        -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --font-family-korean:
+        "Pretendard Variable", Pretendard, "Noto Sans KR", "Noto Sans CJK KR",
+        "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+    --font-family-japanese:
+        "Pretendard JP Variable", "Pretendard JP", "Meiryo UI", Meiryo,
+        "Hiragino Maru Gothic ProN", "Yu Gothic UI", "Yu Gothic",
+        "Noto Sans JP", "Noto Sans CJK JP", sans-serif;
+    --font-family-ui: var(--font-family-latin);
+    --font-weight-label: 700;
+    --font-weight-strong: 700;
     color-scheme: light;
-    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-family: var(--font-family-ui);
+    font-synthesis: none;
     background: #e6ecea;
     color: #17201d;
+}
+
+:root:lang(ko) {
+    --font-family-ui: var(--font-family-korean);
+}
+
+:root:lang(ja) {
+    --font-family-ui: var(--font-family-japanese);
 }
 
 * {
@@ -27,8 +66,7 @@ input {
 }
 
 .app {
-    display: grid;
-    grid-template-columns: minmax(320px, 400px) minmax(0, 1fr);
+    position: relative;
     min-height: 0;
     height: 100vh;
     height: 100dvh;
@@ -36,11 +74,11 @@ input {
     background: #e6ecea;
 }
 
-.app.settings-collapsed {
-    grid-template-columns: 0 minmax(0, 1fr);
-}
-
 .settings-panel {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 30;
+    width: var(--settings-panel-width);
     min-width: 0;
     min-height: 0;
     display: grid;
@@ -48,37 +86,159 @@ input {
     border-right: 1px solid #ccd7d4;
     overflow: hidden;
     background: #fbfcfc;
+    box-shadow: 12px 0 32px rgb(23 32 29 / 12%);
+    transform: translateX(0);
+    visibility: visible;
+    transition:
+        transform 240ms ease,
+        visibility 0s;
 }
 
 .app.settings-collapsed .settings-panel {
+    transform: translateX(-100%);
     visibility: hidden;
-    border-right: 0;
     pointer-events: none;
+    transition:
+        transform 240ms ease,
+        visibility 0s 240ms;
 }
 
 .settings-topbar {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: start;
-    gap: 12px;
     padding: 20px 20px 16px;
 }
 
-.settings-open-button {
+.settings-toggle-button {
     position: fixed;
-    top: 16px;
-    left: 16px;
-    z-index: 20;
-    padding: 0 14px;
-    box-shadow: 0 8px 24px rgb(23 32 29 / 18%);
+    top: 50%;
+    left: var(--settings-panel-width);
+    z-index: 31;
+    width: 38px;
+    min-width: 38px;
+    height: 64px;
+    min-height: 64px;
+    padding: 0;
+    border-left: 0;
+    border-radius: 0 10px 10px 0;
+    box-shadow: 8px 4px 20px rgb(23 32 29 / 18%);
+    transform: translateY(-50%);
+    transition: left 240ms ease;
 }
 
-.settings-close-button {
-    width: 32px;
-    min-width: 32px;
-    height: 32px;
-    min-height: 32px;
-    justify-self: end;
+.app.settings-collapsed .settings-toggle-button {
+    left: 0;
+}
+
+.settings-toggle-button svg {
+    width: 20px;
+    height: 20px;
+    display: block;
+    margin: auto;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: transform 240ms ease;
+}
+
+.app.settings-collapsed .settings-toggle-button svg {
+    transform: rotate(180deg);
+}
+
+.language-switcher {
+    position: fixed;
+    right: 18px;
+    bottom: 18px;
+    z-index: 40;
+}
+
+.language-menu-button {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    min-height: 44px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 1px solid #bdcac6;
+    border-radius: 50%;
+    background: rgb(251 252 252 / 94%);
+    color: #2e6656;
+    box-shadow: 0 8px 24px rgb(23 32 29 / 16%);
+    backdrop-filter: blur(8px);
+}
+
+.language-menu-button:hover,
+.language-menu-button[aria-expanded="true"] {
+    border-color: #286653;
+    background: #2e735e;
+    color: #ffffff;
+}
+
+.language-menu-button svg {
+    width: 21px;
+    height: 21px;
+    display: block;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.language-menu {
+    position: absolute;
+    right: 0;
+    bottom: calc(100% + 8px);
+    min-width: 128px;
+    display: grid;
+    gap: 2px;
+    padding: 4px;
+    border: 1px solid #bdcac6;
+    border-radius: 9px;
+    background: rgb(251 252 252 / 96%);
+    box-shadow: 0 8px 24px rgb(23 32 29 / 16%);
+    backdrop-filter: blur(8px);
+}
+
+.language-menu[hidden] {
+    display: none;
+}
+
+.language-button {
+    width: 100%;
+    min-height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 0 9px;
+    border-color: transparent;
+    border-radius: 6px;
+    background: transparent;
+    color: #354540;
+    font-family: var(--font-family-latin);
+    font-size: 12px;
+    font-weight: 500;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.language-button:lang(ko) {
+    font-family: var(--font-family-korean);
+}
+
+.language-button:lang(ja) {
+    font-family: var(--font-family-japanese);
+}
+
+.language-button:hover {
+    background: #edf3f1;
+}
+
+.language-button.is-active {
+    border-color: #286653;
+    background: #2e735e;
+    color: #ffffff;
 }
 
 .header {
@@ -91,7 +251,7 @@ input {
     margin: 0;
     color: #16231f;
     font-size: 22px;
-    font-weight: 800;
+    font-weight: var(--font-weight-strong);
     letter-spacing: 0;
     overflow-wrap: anywhere;
 }
@@ -132,7 +292,7 @@ input {
     border-radius: 6px 6px 0 0;
     background: #edf3f1;
     color: #354540;
-    font-size: 13px;
+    font-size: 14px;
 }
 
 .tab-button.is-active {
@@ -164,8 +324,8 @@ input {
 .group-title {
     margin: 0;
     color: #23312d;
-    font-size: 14px;
-    font-weight: 800;
+    font-size: 15px;
+    font-weight: var(--font-weight-strong);
 }
 
 .group-heading-row {
@@ -193,7 +353,7 @@ label {
     gap: 6px;
     color: #354540;
     font-size: 13px;
-    font-weight: 650;
+    font-weight: var(--font-weight-label);
 }
 
 input[type="text"],
@@ -257,7 +417,7 @@ button {
     border-radius: 6px;
     background: #2e735e;
     color: #ffffff;
-    font-weight: 800;
+    font-weight: var(--font-weight-strong);
     cursor: pointer;
 }
 
@@ -310,18 +470,6 @@ button.secondary {
     stroke-linejoin: round;
 }
 
-.settings-close-button.icon-button {
-    width: 32px;
-    min-width: 32px;
-    height: 32px;
-    min-height: 32px;
-}
-
-.settings-close-button svg {
-    width: 16px;
-    height: 16px;
-}
-
 button:disabled {
     cursor: default;
     opacity: 0.45;
@@ -343,7 +491,7 @@ canvas:focus-visible {
     background: #f4f7f6;
     color: #24342f;
     font-size: 13px;
-    font-weight: 800;
+    font-weight: var(--font-weight-strong);
 }
 
 .block-meta {
@@ -365,11 +513,11 @@ canvas:focus-visible {
 .block-meta-label,
 .block-data-title {
     color: #23312d;
-    font-weight: 800;
+    font-weight: var(--font-weight-strong);
 }
 
 .block-data-title {
-    font-size: 13px;
+    font-size: 14px;
 }
 
 .block-identify-code {
@@ -403,9 +551,15 @@ pre {
     display: grid;
     place-items: center;
     height: 100%;
+    margin-left: var(--settings-panel-width);
     padding: 24px;
     overflow: hidden;
     background: #e6ecea;
+    transition: margin-left 240ms ease;
+}
+
+.app.settings-collapsed .stage {
+    margin-left: 0;
 }
 
 .canvas-wrap {
@@ -461,7 +615,7 @@ pre {
 
 .generation-overlay-text {
     font-size: 14px;
-    font-weight: 800;
+    font-weight: var(--font-weight-strong);
 }
 
 @keyframes spin {
@@ -477,49 +631,22 @@ canvas {
 }
 
 @media (max-width: 940px) {
-    .app,
-    .app.settings-collapsed {
-        grid-template-columns: 1fr;
-    }
-
-    .app {
-        grid-template-rows: minmax(0, 46dvh) minmax(0, 54dvh);
-    }
-
-    .app.settings-collapsed {
-        grid-template-rows: minmax(0, 1fr) 0;
-    }
-
-    .settings-panel {
-        grid-row: 2;
-        grid-column: 1;
-        border-top: 1px solid #ccd7d4;
-        border-right: 0;
-    }
-
-    .app.settings-collapsed .settings-panel {
-        visibility: hidden;
-        border-top: 0;
-    }
-
     .stage {
-        grid-row: 1;
-        grid-column: 1;
+        margin-left: 0;
         padding: 16px;
     }
 
     .canvas-wrap {
-        width: min(100%, 900px, calc(46dvh - 32px));
-        max-height: calc(46dvh - 32px);
-    }
-
-    .app.settings-collapsed .canvas-wrap {
         width: min(100%, 900px, calc(100dvh - 32px));
         max-height: calc(100dvh - 32px);
     }
 }
 
 @media (max-width: 520px) {
+    :root {
+        --settings-panel-width: min(400px, calc(100vw - 48px));
+    }
+
     .settings-topbar {
         padding: 16px 16px 14px;
     }
@@ -539,5 +666,19 @@ canvas {
 
     .actions {
         grid-template-columns: 1fr;
+    }
+
+    .language-switcher {
+        right: 12px;
+        bottom: 12px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .settings-panel,
+    .settings-toggle-button,
+    .settings-toggle-button svg,
+    .stage {
+        transition-duration: 0s;
     }
 }

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ko">
+<html lang="en">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -16,38 +16,30 @@
 </head>
 <body>
     <main class="app">
-        <button
-            id="settingsOpenButton"
-            class="settings-open-button"
-            type="button"
-            aria-controls="settingsPanel"
-            aria-expanded="false"
-            hidden
+        <aside
+            id="settingsPanel"
+            class="settings-panel"
+            aria-label="Settings"
+            data-i18n-aria-label="settings.label"
         >
-            Settings
-        </button>
-
-        <aside id="settingsPanel" class="settings-panel" aria-label="Settings">
             <div class="settings-topbar">
                 <div class="header">
-                    <h1 class="brand">Block Generator</h1>
-                    <div id="status" class="status" role="status">Ready</div>
+                    <h1 class="brand" data-i18n="app.title">Block Generator</h1>
+                    <div
+                        id="status"
+                        class="status"
+                        role="status"
+                        data-i18n="status.ready"
+                    >Ready</div>
                 </div>
-                <button
-                    id="settingsCloseButton"
-                    class="settings-close-button icon-button secondary"
-                    type="button"
-                    aria-label="Hide settings"
-                    aria-controls="settingsPanel"
-                    aria-expanded="true"
-                >
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M6 6L18 18M18 6L6 18"></path>
-                    </svg>
-                </button>
             </div>
 
-            <div class="settings-tabs" role="tablist" aria-label="Settings sections">
+            <div
+                class="settings-tabs"
+                role="tablist"
+                aria-label="Settings sections"
+                data-i18n-aria-label="settings.sectionsLabel"
+            >
                 <button
                     id="generationTab"
                     class="tab-button is-active"
@@ -57,7 +49,7 @@
                     aria-controls="generationPanel"
                     data-tab-target="generation"
                 >
-                    Generation
+                    <span data-i18n="tabs.generation">Generation</span>
                 </button>
                 <button
                     id="renderingTab"
@@ -69,7 +61,7 @@
                     data-tab-target="rendering"
                     tabindex="-1"
                 >
-                    Rendering
+                    <span data-i18n="tabs.rendering">Rendering</span>
                 </button>
             </div>
 
@@ -82,37 +74,37 @@
                     data-tab-panel="generation"
                 >
                     <form id="generatorForm" class="control-group">
-                        <h2 class="group-title">Generation</h2>
+                        <h2 class="group-title" data-i18n="generation.title">Generation</h2>
                         <label>
-                            Generate count
+                            <span data-i18n="generation.generateCount">Generate count</span>
                             <input id="generateCount" type="number" value="300" min="1" max="2000" step="1">
                         </label>
                         <div class="number-grid">
                             <label>
-                                Block count min
+                                <span data-i18n="generation.blockCountMin">Block count min</span>
                                 <input id="blockCountMin" type="number" value="5" min="1" max="2197" step="1">
                             </label>
                             <label>
-                                Block count max
+                                <span data-i18n="generation.blockCountMax">Block count max</span>
                                 <input id="blockCountMax" type="number" value="15" min="1" max="2197" step="1">
                             </label>
                         </div>
                         <div class="dimension-grid">
                             <label>
-                                Rows
+                                <span data-i18n="generation.rows">Rows</span>
                                 <input id="maxRows" type="number" value="4" min="1" max="13" step="1">
                             </label>
                             <label>
-                                Columns
+                                <span data-i18n="generation.columns">Columns</span>
                                 <input id="maxCols" type="number" value="4" min="1" max="13" step="1">
                             </label>
                             <label>
-                                Height
+                                <span data-i18n="generation.height">Height</span>
                                 <input id="maxHeight" type="number" value="5" min="1" max="13" step="1">
                             </label>
                         </div>
                         <label>
-                            Density
+                            <span data-i18n="generation.density">Density</span>
                             <span class="range-pair">
                                 <input id="density" type="range" min="0" max="100" step="1" value="0">
                                 <input id="densityValue" type="number" min="0" max="100" step="1" value="0">
@@ -120,22 +112,27 @@
                         </label>
                         <label class="inline">
                             <input id="allowDuplicate" type="checkbox">
-                            Allow duplicates
+                            <span data-i18n="generation.allowDuplicates">Allow duplicates</span>
                         </label>
                         <div class="actions">
-                            <button id="startButton" type="submit">Start</button>
+                            <button
+                                id="startButton"
+                                type="submit"
+                                data-i18n="generation.start"
+                            >Start</button>
                             <button id="downloadButton" class="secondary" type="button" disabled>JPG</button>
                         </div>
                     </form>
 
                     <div class="control-group">
-                        <h2 class="group-title">Blocks</h2>
+                        <h2 class="group-title" data-i18n="generation.blocks">Blocks</h2>
                         <div class="navigation">
                             <button
                                 id="prevButton"
                                 class="icon-button secondary"
                                 type="button"
                                 aria-label="Previous block"
+                                data-i18n-aria-label="generation.previousBlock"
                                 disabled
                             >
                                 <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -148,6 +145,7 @@
                                 class="icon-button secondary"
                                 type="button"
                                 aria-label="Next block"
+                                data-i18n-aria-label="generation.nextBlock"
                                 disabled
                             >
                                 <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -156,7 +154,10 @@
                             </button>
                         </div>
                         <div id="blockMeta" class="block-meta"></div>
-                        <div class="block-data-title">Block data</div>
+                        <div
+                            class="block-data-title"
+                            data-i18n="generation.blockData"
+                        >Block data</div>
                         <pre id="heightData"></pre>
                     </div>
                 </section>
@@ -171,56 +172,59 @@
                 >
                     <div class="control-group">
                         <div class="group-heading-row">
-                            <h2 class="group-title">Render</h2>
+                            <h2
+                                class="group-title"
+                                data-i18n="rendering.title"
+                            >Render</h2>
                             <button
                                 id="resetRenderButton"
                                 class="compact-button secondary"
                                 type="button"
                             >
                                 <svg viewBox="0 0 24 24" aria-hidden="true">
-                                    <path d="M4 12A8 8 0 1 0 6.34 6.34"></path>
-                                    <path d="M4 5v6h6"></path>
+                                    <path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path>
+                                    <path d="M3 3v5h5"></path>
                                 </svg>
-                                Defaults
+                                <span data-i18n="rendering.defaults">Defaults</span>
                             </button>
                         </div>
                         <div class="number-grid">
                             <label>
-                                Background
+                                <span data-i18n="rendering.background">Background</span>
                                 <input id="backgroundColor" type="color" value="#f6f7f9">
                             </label>
                             <label>
-                                Block color
+                                <span data-i18n="rendering.blockColor">Block color</span>
                                 <input id="blockColor" type="color" value="#c0aa81">
                             </label>
                         </div>
                         <label>
-                            Edge color
+                            <span data-i18n="rendering.edgeColor">Edge color</span>
                             <input id="edgeColor" type="color" value="#000000">
                         </label>
                         <label>
-                            Edge thickness
+                            <span data-i18n="rendering.edgeThickness">Edge thickness</span>
                             <span class="range-pair">
                                 <input id="edgeThickness" type="range" min="1" max="12" step="1" value="4">
                                 <input id="edgeThicknessValue" type="number" min="1" max="12" step="1" value="4">
                             </span>
                         </label>
                         <label>
-                            Camera distance
+                            <span data-i18n="rendering.cameraDistance">Camera distance</span>
                             <span class="range-pair">
                                 <input id="cameraDistance" type="range" min="6" max="32" step="0.5" value="12">
                                 <input id="cameraDistanceValue" type="number" min="6" max="32" step="0.5" value="12">
                             </span>
                         </label>
                         <label>
-                            Camera angle
+                            <span data-i18n="rendering.cameraAngle">Camera angle</span>
                             <span class="range-pair">
                                 <input id="cameraAzimuthDeg" type="range" min="0" max="360" step="1" value="35">
                                 <input id="cameraAzimuthDegValue" type="number" min="0" max="360" step="1" value="35">
                             </span>
                         </label>
                         <label>
-                            Camera height
+                            <span data-i18n="rendering.cameraHeight">Camera height</span>
                             <span class="range-pair">
                                 <input id="cameraElevationDeg" type="range" min="1" max="89" step="1" value="25">
                                 <input id="cameraElevationDegValue" type="number" min="1" max="89" step="1" value="25">
@@ -229,34 +233,34 @@
                     </div>
 
                     <div class="control-group">
-                        <h2 class="group-title">Light</h2>
+                        <h2 class="group-title" data-i18n="lighting.title">Light</h2>
                         <label class="inline">
                             <input id="lightFollowsCamera" type="checkbox">
-                            Follow camera
+                            <span data-i18n="lighting.followCamera">Follow camera</span>
                         </label>
                         <label>
-                            Light angle
+                            <span data-i18n="lighting.angle">Light angle</span>
                             <span class="range-pair">
                                 <input id="lightAzimuthDeg" type="range" min="0" max="360" step="1" value="30">
                                 <input id="lightAzimuthDegValue" type="number" min="0" max="360" step="1" value="30">
                             </span>
                         </label>
                         <label>
-                            Light height
+                            <span data-i18n="lighting.height">Light height</span>
                             <span class="range-pair">
                                 <input id="lightElevationDeg" type="range" min="1" max="89" step="1" value="20">
                                 <input id="lightElevationDegValue" type="number" min="1" max="89" step="1" value="20">
                             </span>
                         </label>
                         <label>
-                            Ambient light
+                            <span data-i18n="lighting.ambient">Ambient light</span>
                             <span class="range-pair">
                                 <input id="ambientLightIntensity" type="range" min="0" max="2" step="0.05" value="0.15">
                                 <input id="ambientLightIntensityValue" type="number" min="0" max="2" step="0.05" value="0.15">
                             </span>
                         </label>
                         <label>
-                            Directional light
+                            <span data-i18n="lighting.directional">Directional light</span>
                             <span class="range-pair">
                                 <input id="directionalLightIntensity" type="range" min="0" max="8" step="0.1" value="4">
                                 <input id="directionalLightIntensityValue" type="number" min="0" max="8" step="0.1" value="4">
@@ -267,6 +271,20 @@
             </div>
         </aside>
 
+        <button
+            id="settingsToggleButton"
+            class="settings-toggle-button"
+            type="button"
+            aria-label="Hide settings"
+            data-i18n-aria-label="settings.hide"
+            aria-controls="settingsPanel"
+            aria-expanded="true"
+        >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M15 5L8 12L15 19"></path>
+            </svg>
+        </button>
+
         <section class="stage">
             <div class="canvas-wrap">
                 <canvas
@@ -275,6 +293,7 @@
                     height="1200"
                     tabindex="0"
                     aria-label="Block preview"
+                    data-i18n-aria-label="preview.label"
                 ></canvas>
                 <div
                     id="generationOverlay"
@@ -283,10 +302,73 @@
                     hidden
                 >
                     <div class="loading-spinner" aria-hidden="true"></div>
-                    <div class="generation-overlay-text">Generating blocks...</div>
+                    <div
+                        class="generation-overlay-text"
+                        data-i18n="generation.overlay"
+                    >Generating blocks...</div>
                 </div>
             </div>
         </section>
+
+        <div
+            id="languageSwitcher"
+            class="language-switcher"
+        >
+            <button
+                id="languageMenuButton"
+                class="language-menu-button secondary"
+                type="button"
+                aria-label="Language"
+                data-i18n-aria-label="language.selector"
+                title="Language"
+                data-i18n-title="language.selector"
+                aria-haspopup="menu"
+                aria-controls="languageMenu"
+                aria-expanded="false"
+            >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9"></circle>
+                    <path d="M3 12h18"></path>
+                    <path d="M12 3c2.3 2.5 3.5 5.5 3.5 9s-1.2 6.5-3.5 9"></path>
+                    <path d="M12 3c-2.3 2.5-3.5 5.5-3.5 9s1.2 6.5 3.5 9"></path>
+                </svg>
+            </button>
+            <div
+                id="languageMenu"
+                class="language-menu"
+                role="menu"
+                aria-labelledby="languageMenuButton"
+                hidden
+            >
+                <button
+                    class="language-button"
+                    type="button"
+                    role="menuitemradio"
+                    lang="en"
+                    data-locale="en"
+                    data-i18n-title="language.english"
+                    title="English"
+                >EN</button>
+                <button
+                    class="language-button"
+                    type="button"
+                    role="menuitemradio"
+                    lang="ko"
+                    data-locale="ko"
+                    data-i18n-title="language.korean"
+                    title="Korean"
+                >한국어</button>
+                <button
+                    class="language-button"
+                    type="button"
+                    role="menuitemradio"
+                    lang="ja"
+                    data-locale="ja"
+                    data-i18n-title="language.japanese"
+                    title="Japanese"
+                >日本語</button>
+            </div>
+        </div>
     </main>
 
     <script type="module" src="./src/main.mjs"></script>
