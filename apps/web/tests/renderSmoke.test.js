@@ -189,6 +189,63 @@ test('runs the web generation flow and renders a nonblank Three.js canvas', {
     assert.equal(iconButtonState.prevWidth, iconButtonState.prevHeight);
     assert.equal(iconButtonState.nextWidth, iconButtonState.nextHeight);
 
+    let generatedContentState = await page.evaluate(() => ({
+        downloadDisabled: document.querySelector('#downloadButton').disabled,
+        renderingTabDisabled: document.querySelector('#renderingTab').disabled,
+        renderingPanelDisabled: document.querySelector('#renderingPanel')
+            .getAttribute('aria-disabled'),
+        renderingControlsDisabled: document.querySelector('#renderingControls').disabled,
+        backgroundColorDisabled: document.querySelector('#backgroundColor')
+            .matches(':disabled'),
+        resetRenderDisabled: document.querySelector('#resetRenderButton')
+            .matches(':disabled')
+    }));
+    assert.deepEqual(generatedContentState, {
+        downloadDisabled: true,
+        renderingTabDisabled: false,
+        renderingPanelDisabled: 'true',
+        renderingControlsDisabled: true,
+        backgroundColorDisabled: true,
+        resetRenderDisabled: true
+    });
+
+    await page.locator('#generationTab').focus();
+    await page.keyboard.press('ArrowRight');
+    assert.equal(
+        await page.locator('#renderingTab').getAttribute('aria-selected'),
+        'true'
+    );
+    assert.equal(await page.locator('#renderingPanel').getAttribute('hidden'), null);
+    await page.keyboard.press('ArrowLeft');
+    assert.equal(
+        await page.locator('#generationTab').getAttribute('aria-selected'),
+        'true'
+    );
+
+    const initialRenderValues = await page.evaluate(() => ({
+        cameraDistance: document.querySelector('#cameraDistance').value,
+        cameraAzimuth: document.querySelector('#cameraAzimuthDeg').value,
+        cameraElevation: document.querySelector('#cameraElevationDeg').value
+    }));
+    const initialCanvasBox = await page.locator('#renderCanvas').boundingBox();
+    assert.ok(initialCanvasBox);
+    await page.mouse.move(
+        initialCanvasBox.x + initialCanvasBox.width / 2,
+        initialCanvasBox.y + initialCanvasBox.height / 2
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+        initialCanvasBox.x + initialCanvasBox.width / 2 + 40,
+        initialCanvasBox.y + initialCanvasBox.height / 2 - 20
+    );
+    await page.mouse.up();
+    await page.mouse.wheel(0, -100);
+    assert.deepEqual(await page.evaluate(() => ({
+        cameraDistance: document.querySelector('#cameraDistance').value,
+        cameraAzimuth: document.querySelector('#cameraAzimuthDeg').value,
+        cameraElevation: document.querySelector('#cameraElevationDeg').value
+    })), initialRenderValues);
+
     await page.click('#startButton');
     await page.waitForFunction(
         () => !document.querySelector('#generationOverlay')?.hidden,
@@ -238,6 +295,26 @@ test('runs the web generation flow and renders a nonblank Three.js canvas', {
 
     let blockPositionText = await page.textContent('#blockPosition');
     assert.equal(blockPositionText, '1 / 300');
+
+    generatedContentState = await page.evaluate(() => ({
+        downloadDisabled: document.querySelector('#downloadButton').disabled,
+        renderingTabDisabled: document.querySelector('#renderingTab').disabled,
+        renderingPanelDisabled: document.querySelector('#renderingPanel')
+            .getAttribute('aria-disabled'),
+        renderingControlsDisabled: document.querySelector('#renderingControls').disabled,
+        backgroundColorDisabled: document.querySelector('#backgroundColor')
+            .matches(':disabled'),
+        resetRenderDisabled: document.querySelector('#resetRenderButton')
+            .matches(':disabled')
+    }));
+    assert.deepEqual(generatedContentState, {
+        downloadDisabled: false,
+        renderingTabDisabled: false,
+        renderingPanelDisabled: 'false',
+        renderingControlsDisabled: false,
+        backgroundColorDisabled: false,
+        resetRenderDisabled: false
+    });
 
     const blockMetaState = await page.evaluate(() => {
         const identifyBlock = document.querySelector('#blockMeta .block-identify-code');

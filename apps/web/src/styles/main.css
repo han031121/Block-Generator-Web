@@ -316,6 +316,15 @@ input {
     display: none;
 }
 
+.rendering-controls {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    display: grid;
+    gap: 22px;
+}
+
 .control-group {
     display: grid;
     gap: 12px;
