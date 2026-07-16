@@ -16,35 +16,12 @@
 </head>
 <body>
     <main class="app">
-        <button
-            id="settingsOpenButton"
-            class="settings-open-button"
-            type="button"
-            aria-controls="settingsPanel"
-            aria-expanded="false"
-            hidden
-        >
-            Settings
-        </button>
-
         <aside id="settingsPanel" class="settings-panel" aria-label="Settings">
             <div class="settings-topbar">
                 <div class="header">
                     <h1 class="brand">Block Generator</h1>
                     <div id="status" class="status" role="status">Ready</div>
                 </div>
-                <button
-                    id="settingsCloseButton"
-                    class="settings-close-button icon-button secondary"
-                    type="button"
-                    aria-label="Hide settings"
-                    aria-controls="settingsPanel"
-                    aria-expanded="true"
-                >
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M6 6L18 18M18 6L6 18"></path>
-                    </svg>
-                </button>
             </div>
 
             <div class="settings-tabs" role="tablist" aria-label="Settings sections">
@@ -266,6 +243,19 @@
                 </section>
             </div>
         </aside>
+
+        <button
+            id="settingsToggleButton"
+            class="settings-toggle-button"
+            type="button"
+            aria-label="Hide settings"
+            aria-controls="settingsPanel"
+            aria-expanded="true"
+        >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M15 5L8 12L15 19"></path>
+            </svg>
+        </button>
 
         <section class="stage">
             <div class="canvas-wrap">

@@ -36,7 +36,10 @@ test('runs the web generation flow and renders a nonblank Three.js canvas', {
             ).overflowY,
             panelAriaHidden: document.querySelector('#settingsPanel')
                 .getAttribute('aria-hidden'),
-            openButtonHidden: document.querySelector('#settingsOpenButton').hidden,
+            toggleExpanded: document.querySelector('#settingsToggleButton')
+                .getAttribute('aria-expanded'),
+            toggleLabel: document.querySelector('#settingsToggleButton')
+                .getAttribute('aria-label'),
             canvasInsideViewport: canvasRect.left >= 0 &&
                 canvasRect.top >= 0 &&
                 canvasRect.right <= window.innerWidth + 1 &&
@@ -50,33 +53,39 @@ test('runs the web generation flow and renders a nonblank Three.js canvas', {
     assert.equal(layoutState.pageScrollsVertically, false);
     assert.equal(layoutState.settingsOverflowY, 'auto');
     assert.equal(layoutState.panelAriaHidden, 'false');
-    assert.equal(layoutState.openButtonHidden, true);
+    assert.equal(layoutState.toggleExpanded, 'true');
+    assert.equal(layoutState.toggleLabel, 'Hide settings');
     assert.equal(layoutState.canvasInsideViewport, true);
     assert.equal(layoutState.canvasWidth, layoutState.canvasHeight);
 
     const iconButtonState = await page.evaluate(() => {
-        const closeRect = document.querySelector('#settingsCloseButton')
+        const panelRect = document.querySelector('#settingsPanel')
+            .getBoundingClientRect();
+        const toggleRect = document.querySelector('#settingsToggleButton')
             .getBoundingClientRect();
         const prevRect = document.querySelector('#prevButton').getBoundingClientRect();
         const nextRect = document.querySelector('#nextButton').getBoundingClientRect();
 
         return {
-            closeText: document.querySelector('#settingsCloseButton').innerText.trim(),
+            toggleText: document.querySelector('#settingsToggleButton').innerText.trim(),
             prevText: document.querySelector('#prevButton').innerText.trim(),
             nextText: document.querySelector('#nextButton').innerText.trim(),
-            closeWidth: closeRect.width,
-            closeHeight: closeRect.height,
+            toggleWidth: toggleRect.width,
+            toggleHeight: toggleRect.height,
+            toggleLeft: toggleRect.left,
+            panelRight: panelRect.right,
             prevWidth: prevRect.width,
             prevHeight: prevRect.height,
             nextWidth: nextRect.width,
             nextHeight: nextRect.height
         };
     });
-    assert.equal(iconButtonState.closeText, '');
+    assert.equal(iconButtonState.toggleText, '');
     assert.equal(iconButtonState.prevText, '');
     assert.equal(iconButtonState.nextText, '');
-    assert.ok(iconButtonState.closeWidth <= 34);
-    assert.equal(iconButtonState.closeWidth, iconButtonState.closeHeight);
+    assert.equal(iconButtonState.toggleWidth, 38);
+    assert.equal(iconButtonState.toggleHeight, 64);
+    assert.equal(iconButtonState.toggleLeft, iconButtonState.panelRight);
     assert.equal(iconButtonState.prevWidth, iconButtonState.prevHeight);
     assert.equal(iconButtonState.nextWidth, iconButtonState.nextHeight);
 
@@ -226,17 +235,19 @@ test('runs the web generation flow and renders a nonblank Three.js canvas', {
     blockPositionText = await page.textContent('#blockPosition');
     assert.equal(blockPositionText, '1 / 2');
 
-    await page.click('#settingsCloseButton');
+    await page.click('#settingsToggleButton');
     layoutState = await readLayoutState();
     assert.equal(layoutState.pageScrollsVertically, false);
     assert.equal(layoutState.panelAriaHidden, 'true');
-    assert.equal(layoutState.openButtonHidden, false);
+    assert.equal(layoutState.toggleExpanded, 'false');
+    assert.equal(layoutState.toggleLabel, 'Show settings');
     assert.equal(layoutState.canvasInsideViewport, true);
 
-    await page.click('#settingsOpenButton');
+    await page.click('#settingsToggleButton');
     layoutState = await readLayoutState();
     assert.equal(layoutState.panelAriaHidden, 'false');
-    assert.equal(layoutState.openButtonHidden, true);
+    assert.equal(layoutState.toggleExpanded, 'true');
+    assert.equal(layoutState.toggleLabel, 'Hide settings');
     assert.equal(layoutState.canvasInsideViewport, true);
 
     let tabState = await page.evaluate(() => ({
@@ -554,15 +565,23 @@ test('runs the web generation flow and renders a nonblank Three.js canvas', {
     assert.ok(litAverageLuminance > metrics.averageLuminance + 20);
 
     await page.setViewportSize({ width: 390, height: 760 });
+    await page.waitForFunction(() => {
+        const canvasRect = document.querySelector('.canvas-wrap').getBoundingClientRect();
+        return canvasRect.left >= 0 &&
+            canvasRect.top >= 0 &&
+            canvasRect.right <= window.innerWidth + 1 &&
+            canvasRect.bottom <= window.innerHeight + 1;
+    });
     layoutState = await readLayoutState();
     assert.equal(layoutState.pageScrollsVertically, false);
     assert.equal(layoutState.canvasInsideViewport, true);
     assert.equal(layoutState.canvasWidth, layoutState.canvasHeight);
 
-    await page.click('#settingsCloseButton');
+    await page.click('#settingsToggleButton');
     layoutState = await readLayoutState();
     assert.equal(layoutState.panelAriaHidden, 'true');
-    assert.equal(layoutState.openButtonHidden, false);
+    assert.equal(layoutState.toggleExpanded, 'false');
+    assert.equal(layoutState.toggleLabel, 'Show settings');
     assert.equal(layoutState.canvasInsideViewport, true);
 
     await page.screenshot({

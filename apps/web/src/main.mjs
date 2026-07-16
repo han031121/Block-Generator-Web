@@ -14,8 +14,7 @@ import {
 
 const app = document.querySelector('.app');
 const settingsPanel = document.querySelector('#settingsPanel');
-const settingsOpenButton = document.querySelector('#settingsOpenButton');
-const settingsCloseButton = document.querySelector('#settingsCloseButton');
+const settingsToggleButton = document.querySelector('#settingsToggleButton');
 const tabButtons = Array.from(document.querySelectorAll('[data-tab-target]'));
 const tabPanels = Array.from(document.querySelectorAll('[data-tab-panel]'));
 const canvas = document.querySelector('#renderCanvas');
@@ -83,16 +82,14 @@ let pendingRenderFrame = 0;
 function setSettingsPanelOpen(isOpen, shouldFocus = false) {
     app.classList.toggle('settings-collapsed', !isOpen);
     settingsPanel.setAttribute('aria-hidden', String(!isOpen));
-    settingsOpenButton.hidden = isOpen;
-    settingsOpenButton.setAttribute('aria-expanded', String(isOpen));
-    settingsCloseButton.setAttribute('aria-expanded', String(isOpen));
+    settingsToggleButton.setAttribute('aria-expanded', String(isOpen));
+    settingsToggleButton.setAttribute(
+        'aria-label',
+        isOpen ? 'Hide settings' : 'Show settings'
+    );
 
-    if (isOpen && shouldFocus) {
-        settingsCloseButton.focus();
-    }
-
-    if (!isOpen && settingsPanel.contains(document.activeElement)) {
-        settingsOpenButton.focus();
+    if (shouldFocus || (!isOpen && settingsPanel.contains(document.activeElement))) {
+        settingsToggleButton.focus();
     }
 }
 
@@ -125,11 +122,9 @@ function moveSettingsTab(offset) {
 }
 
 function bindSettingsShellEvents() {
-    settingsOpenButton.addEventListener('click', () => {
-        setSettingsPanelOpen(true, true);
-    });
-    settingsCloseButton.addEventListener('click', () => {
-        setSettingsPanelOpen(false);
+    settingsToggleButton.addEventListener('click', () => {
+        const isOpen = settingsToggleButton.getAttribute('aria-expanded') === 'true';
+        setSettingsPanelOpen(!isOpen, true);
     });
 
     for (const button of tabButtons) {
