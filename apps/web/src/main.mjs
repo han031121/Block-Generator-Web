@@ -23,6 +23,8 @@ const settingsPanel = document.querySelector('#settingsPanel');
 const settingsToggleButton = document.querySelector('#settingsToggleButton');
 const tabButtons = Array.from(document.querySelectorAll('[data-tab-target]'));
 const tabPanels = Array.from(document.querySelectorAll('[data-tab-panel]'));
+const renderingPanel = document.querySelector('#renderingPanel');
+const renderingControls = document.querySelector('#renderingControls');
 const canvas = document.querySelector('#renderCanvas');
 const canvasWrap = document.querySelector('.canvas-wrap');
 const generationOverlay = document.querySelector('#generationOverlay');
@@ -118,6 +120,13 @@ function setSettingsPanelOpen(isOpen, shouldFocus = false) {
 }
 
 function setActiveSettingsTab(tabName, shouldFocus = false) {
+    const targetButton = tabButtons.find((button) =>
+        button.dataset.tabTarget === tabName
+    );
+    if (!targetButton || targetButton.disabled) {
+        return;
+    }
+
     for (const button of tabButtons) {
         const isActive = button.dataset.tabTarget === tabName;
         button.classList.toggle('is-active', isActive);
@@ -137,12 +146,15 @@ function setActiveSettingsTab(tabName, shouldFocus = false) {
 }
 
 function moveSettingsTab(offset) {
-    const activeTabIndex = tabButtons.findIndex((button) =>
+    const enabledTabButtons = tabButtons.filter((button) => !button.disabled);
+    const activeTabIndex = enabledTabButtons.findIndex((button) =>
         button.getAttribute('aria-selected') === 'true'
     );
-    const nextIndex = (activeTabIndex + offset + tabButtons.length) % tabButtons.length;
+    const nextIndex = (
+        activeTabIndex + offset + enabledTabButtons.length
+    ) % enabledTabButtons.length;
 
-    setActiveSettingsTab(tabButtons[nextIndex].dataset.tabTarget, true);
+    setActiveSettingsTab(enabledTabButtons[nextIndex].dataset.tabTarget, true);
 }
 
 function bindSettingsShellEvents() {
@@ -385,9 +397,9 @@ function syncLightPositionToCamera() {
 }
 
 function updateLightPositionControlState() {
-    const shouldDisable = controls.lightFollowsCamera.checked;
+    const shouldDisable = activeBlock === null || controls.lightFollowsCamera.checked;
 
-    if (shouldDisable) {
+    if (controls.lightFollowsCamera.checked) {
         syncLightPositionToCamera();
     }
 
@@ -430,10 +442,16 @@ function updateHeightData(block) {
 
 function updateNavigationState() {
     const total = activeBlockJson?.blocks.length ?? 0;
+    const hasActiveBlock = activeBlock !== null;
+
     blockPosition.textContent = total === 0 ? '0 / 0' : `${activeIndex + 1} / ${total}`;
     prevButton.disabled = total === 0 || activeIndex === 0;
     nextButton.disabled = total === 0 || activeIndex + 1 >= total;
-    downloadButton.disabled = activeBlock === null;
+    downloadButton.disabled = !hasActiveBlock;
+    renderingControls.disabled = !hasActiveBlock;
+    renderingPanel.setAttribute('aria-disabled', String(!hasActiveBlock));
+
+    updateLightPositionControlState();
 }
 
 function updateBlockMeta(block) {
@@ -794,7 +812,7 @@ function bindKeyboardShortcuts() {
 
 function bindCanvasInteractionEvents() {
     canvas.addEventListener('pointerdown', (event) => {
-        if (event.button !== 0) {
+        if (!activeBlock || event.button !== 0) {
             return;
         }
 
@@ -843,6 +861,10 @@ function bindCanvasInteractionEvents() {
     canvas.addEventListener('pointercancel', endCameraDrag);
 
     canvas.addEventListener('wheel', (event) => {
+        if (!activeBlock) {
+            return;
+        }
+
         const direction = Math.sign(event.deltaY);
         if (direction === 0) {
             return;
