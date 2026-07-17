@@ -262,7 +262,7 @@ test('runs the web generation flow and renders a nonblank Three.js canvas', {
         startText: document.querySelector('#startButton').textContent
     }));
     assert.deepEqual(generationUiState, {
-        statusText: 'Generating blocks... Timeout after 5 seconds.',
+        statusText: 'Generating blocks... Timeout after 10 seconds.',
         statusState: 'loading',
         statusBusy: 'true',
         formBusy: 'true',
