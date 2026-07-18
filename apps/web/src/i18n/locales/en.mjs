@@ -58,11 +58,35 @@ export default {
     preview: {
         label: 'Block preview'
     },
+    utilities: {
+        label: 'Quick tools',
+        github: 'Open GitHub repository in a new tab',
+        githubTitle: 'GitHub repository'
+    },
     language: {
         selector: 'Language',
         english: 'English',
         korean: 'Korean',
         japanese: 'Japanese'
+    },
+    help: {
+        eyebrow: 'GUIDE',
+        open: 'How to use',
+        close: 'Close help',
+        title: 'How to use',
+        intro: 'Generate a block, adjust it to the view you want, and save it as an image.',
+        step1Title: 'Set generation conditions',
+        step1Body: 'Choose the count, size, density, and other conditions, then select Start.',
+        step2Title: 'Browse blocks',
+        step2Body: 'Use the arrow buttons to inspect each generated block.',
+        step3Title: 'Adjust the view',
+        step3Body: 'Open Rendering to change colors, camera, and lighting. Drag the preview to rotate it and scroll to zoom.',
+        step4Title: 'Save as JPG',
+        step4Body: 'Select JPG when the preview is ready.',
+        shortcuts: 'Keyboard shortcuts',
+        generateShortcut: 'Generate blocks',
+        browseShortcut: 'Previous / next block',
+        saveShortcut: 'Save JPG'
     },
     status: {
         ready: 'Ready',

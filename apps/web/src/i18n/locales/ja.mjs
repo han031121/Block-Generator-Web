@@ -58,11 +58,35 @@ export default {
     preview: {
         label: 'ブロックプレビュー'
     },
+    utilities: {
+        label: 'クイックツール',
+        github: 'GitHubリポジトリを新しいタブで開く',
+        githubTitle: 'GitHubリポジトリ'
+    },
     language: {
         selector: '言語',
         english: '英語',
         korean: '韓国語',
         japanese: '日本語'
+    },
+    help: {
+        eyebrow: 'ガイド',
+        open: '使い方',
+        close: 'ヘルプを閉じる',
+        title: '使い方',
+        intro: 'ブロックを生成し、好みの見た目に調整して画像として保存できます。',
+        step1Title: '生成条件を設定',
+        step1Body: '生成数、サイズ、密度などの条件を指定してから「生成する」を選択します。',
+        step2Title: 'ブロックを確認',
+        step2Body: '矢印ボタンを使って、生成されたブロックを一つずつ確認します。',
+        step3Title: '表示を調整',
+        step3Body: 'レンダリングタブで色、カメラ、ライトを調整します。プレビューをドラッグすると回転し、スクロールすると拡大・縮小できます。',
+        step4Title: 'JPG形式で保存',
+        step4Body: '好みの表示になったら、JPGボタンを選択します。',
+        shortcuts: 'キーボードショートカット',
+        generateShortcut: 'ブロックを生成',
+        browseShortcut: '前 / 次のブロック',
+        saveShortcut: 'JPG形式で保存'
     },
     status: {
         ready: '準備完了',
