@@ -1,8 +1,11 @@
 CXX := g++
 EMCC ?= emcc.bat
-CXXFLAGS := -std=c++20 -Wall -Wextra -Iinclude -Iexternal
+OPTFLAGS ?= -O2 -DNDEBUG
+CXXFLAGS := -std=c++20 $(OPTFLAGS) -Wall -Wextra -Iinclude -Iexternal
 TARGET := bin/blockGenerator.exe
+TEST_TARGET := bin/blockDataTests.exe
 SRCS := src/main.cpp src/blockData.cpp src/blockJson.cpp
+TEST_SRCS := tests/blockData.test.cpp src/blockData.cpp
 WASM_SRCS := src/wasm.cpp src/blockData.cpp src/blockJson.cpp
 HEADERS := include/blockData.hpp include/blockJson.hpp
 INPUT := fixtures/input/sample_input.json
@@ -20,7 +23,7 @@ WASM_FLAGS := \
 	-sINITIAL_MEMORY=128MB \
 	-sFILESYSTEM=0
 
-.PHONY: all clean run wasm wasm-clean
+.PHONY: all clean run test wasm wasm-clean
 
 all: $(TARGET)
 
@@ -38,8 +41,15 @@ wasm: $(WASM_JS)
 run: $(TARGET)
 	./$(TARGET) $(INPUT) $(OUTPUT)
 
+$(TEST_TARGET): $(TEST_SRCS) include/blockData.hpp
+	$(CXX) $(CXXFLAGS) $(TEST_SRCS) -o $(TEST_TARGET)
+
+test: $(TEST_TARGET)
+	./$(TEST_TARGET)
+
 clean:
 	-del /Q $(TARGET) 2>NUL
+	-del /Q $(TEST_TARGET) 2>NUL
 
 wasm-clean:
 	-del /Q "$(WASM_OUT_DIR)\blockGenerator.js" 2>NUL
