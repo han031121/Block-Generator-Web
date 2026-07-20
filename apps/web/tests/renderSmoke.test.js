@@ -49,6 +49,8 @@ test('runs the web generation flow and renders a nonblank Three.js canvas', {
 
     const readLayoutState = async () => page.evaluate(() => {
         const canvasRect = document.querySelector('.canvas-wrap').getBoundingClientRect();
+        const toolbar = document.querySelector('#utilityToolbar');
+        const toolbarRect = toolbar.getBoundingClientRect();
         const scrollElement = document.scrollingElement;
 
         return {
@@ -66,6 +68,15 @@ test('runs the web generation flow and renders a nonblank Three.js canvas', {
                 canvasRect.top >= 0 &&
                 canvasRect.right <= window.innerWidth + 1 &&
                 canvasRect.bottom <= window.innerHeight + 1,
+            toolbarInsideViewport: toolbarRect.left >= 0 &&
+                toolbarRect.top >= 0 &&
+                toolbarRect.right <= window.innerWidth + 1 &&
+                toolbarRect.bottom <= window.innerHeight + 1,
+            toolbarDoesNotOverlapCanvas: toolbarRect.left >= canvasRect.right ||
+                toolbarRect.right <= canvasRect.left ||
+                toolbarRect.top >= canvasRect.bottom ||
+                toolbarRect.bottom <= canvasRect.top,
+            toolbarDirection: getComputedStyle(toolbar).flexDirection,
             canvasWidth: canvasRect.width,
             canvasHeight: canvasRect.height
         };
@@ -78,19 +89,45 @@ test('runs the web generation flow and renders a nonblank Three.js canvas', {
     assert.equal(layoutState.toggleExpanded, 'true');
     assert.equal(layoutState.toggleLabel, 'Hide settings');
     assert.equal(layoutState.canvasInsideViewport, true);
+    assert.equal(layoutState.toolbarInsideViewport, true);
+    assert.equal(layoutState.toolbarDoesNotOverlapCanvas, true);
+    assert.equal(layoutState.toolbarDirection, 'column');
     assert.equal(layoutState.canvasWidth, layoutState.canvasHeight);
+
+    const utilityActionStyles = await page.$$eval('.utility-action', (actions) =>
+        actions.map((action) => {
+            const style = getComputedStyle(action);
+            return {
+                borderColor: style.borderColor,
+                borderStyle: style.borderStyle,
+                borderWidth: style.borderWidth,
+                backgroundColor: style.backgroundColor,
+                color: style.color
+            };
+        })
+    );
+    assert.deepEqual(utilityActionStyles, Array(3).fill({
+        borderColor: 'rgb(119, 135, 129)',
+        borderStyle: 'solid',
+        borderWidth: '1px',
+        backgroundColor: 'rgb(255, 255, 255)',
+        color: 'rgb(36, 52, 47)'
+    }));
 
     let languageState = await page.evaluate(() => {
         const switcher = document.querySelector('#languageSwitcher');
-        const rect = switcher.getBoundingClientRect();
+        const toolbar = document.querySelector('#utilityToolbar');
+        const toolbarRect = toolbar.getBoundingClientRect();
         const menu = document.querySelector('#languageMenu');
         const menuButton = document.querySelector('#languageMenuButton');
 
         return {
             locale: document.documentElement.lang,
-            position: getComputedStyle(switcher).position,
-            rightGap: window.innerWidth - rect.right,
-            bottomGap: window.innerHeight - rect.bottom,
+            toolbarPosition: getComputedStyle(toolbar).position,
+            switcherPosition: getComputedStyle(switcher).position,
+            toolbarRightGap: window.innerWidth - toolbarRect.right,
+            toolbarBottomGap: window.innerHeight - toolbarRect.bottom,
+            toolbarControlIds: Array.from(toolbar.children, (element) => element.id),
             menuHidden: menu.hidden,
             menuRole: menu.getAttribute('role'),
             menuExpanded: menuButton.getAttribute('aria-expanded'),
@@ -105,9 +142,11 @@ test('runs the web generation flow and renders a nonblank Three.js canvas', {
     });
     assert.deepEqual(languageState, {
         locale: 'en',
-        position: 'fixed',
-        rightGap: 18,
-        bottomGap: 18,
+        toolbarPosition: 'fixed',
+        switcherPosition: 'relative',
+        toolbarRightGap: 18,
+        toolbarBottomGap: 18,
+        toolbarControlIds: ['helpButton', 'githubLink', 'languageSwitcher'],
         menuHidden: true,
         menuRole: 'menu',
         menuExpanded: 'false',
@@ -129,6 +168,41 @@ test('runs the web generation flow and renders a nonblank Three.js canvas', {
         await page.evaluate(() => document.activeElement?.id),
         'languageMenuButton'
     );
+
+    const githubState = await page.$eval('#githubLink', (link) => ({
+        href: link.href,
+        target: link.target,
+        rel: link.rel,
+        label: link.getAttribute('aria-label'),
+        hasIcon: link.querySelector('.github-mark') !== null
+    }));
+    assert.deepEqual(githubState, {
+        href: 'https://github.com/han031121/Block-Generator-Web',
+        target: '_blank',
+        rel: 'noopener noreferrer',
+        label: 'Open GitHub repository in a new tab',
+        hasIcon: true
+    });
+
+    await page.click('#helpButton');
+    assert.equal(await page.$eval('#helpDialog', (dialog) => dialog.open), true);
+    assert.equal(await page.textContent('#helpDialogTitle'), 'How to use');
+    assert.equal(
+        await page.locator('#helpCloseButton').getAttribute('aria-label'),
+        'Close help'
+    );
+    await page.screenshot({
+        path: path.join(os.tmpdir(), 'block-generator-web-help.png'),
+        fullPage: true
+    });
+    await page.click('#helpCloseButton');
+    assert.equal(await page.$eval('#helpDialog', (dialog) => dialog.open), false);
+    assert.equal(await page.evaluate(() => document.activeElement?.id), 'helpButton');
+
+    await page.click('#helpButton');
+    await page.keyboard.press('Escape');
+    assert.equal(await page.$eval('#helpDialog', (dialog) => dialog.open), false);
+    assert.equal(await page.evaluate(() => document.activeElement?.id), 'helpButton');
 
     const selectLocale = async (locale) => {
         await page.click('#languageMenuButton');
@@ -262,7 +336,7 @@ test('runs the web generation flow and renders a nonblank Three.js canvas', {
         startText: document.querySelector('#startButton').textContent
     }));
     assert.deepEqual(generationUiState, {
-        statusText: 'Generating blocks... Timeout after 5 seconds.',
+        statusText: 'Generating blocks... Timeout after 10 seconds.',
         statusState: 'loading',
         statusBusy: 'true',
         formBusy: 'true',
@@ -360,6 +434,9 @@ test('runs the web generation flow and renders a nonblank Three.js canvas', {
         ).textContent,
         statusText: document.querySelector('#status').textContent,
         settingsLabel: document.querySelector('#settingsPanel').getAttribute('aria-label'),
+        helpTitle: document.querySelector('#helpDialogTitle').textContent,
+        helpButtonLabel: document.querySelector('#helpButton').getAttribute('aria-label'),
+        githubLinkLabel: document.querySelector('#githubLink').getAttribute('aria-label'),
         metaLabels: Array.from(
             document.querySelectorAll('#blockMeta .block-meta-label')
         ).map((label) => label.textContent),
@@ -402,6 +479,9 @@ test('runs the web generation flow and renders a nonblank Three.js canvas', {
         generateCountLabel: '생성 개수',
         statusText: '블록 300개를 생성했습니다.',
         settingsLabel: '설정',
+        helpTitle: '사용 방법',
+        helpButtonLabel: '사용 방법',
+        githubLinkLabel: '새 탭에서 GitHub 저장소 열기',
         metaLabels: ['인덱스', '큐브', '크기', 'ID'],
         pressedLocales: ['ko']
     });
@@ -445,6 +525,9 @@ test('runs the web generation flow and renders a nonblank Three.js canvas', {
         generateCountLabel: '生成数',
         statusText: '300個のブロックを生成しました。',
         settingsLabel: '設定',
+        helpTitle: '使い方',
+        helpButtonLabel: '使い方',
+        githubLinkLabel: 'GitHubリポジトリを新しいタブで開く',
         metaLabels: ['インデックス', 'キューブ数', 'サイズ', 'ID'],
         pressedLocales: ['ja']
     });
@@ -480,6 +563,9 @@ test('runs the web generation flow and renders a nonblank Three.js canvas', {
         generateCountLabel: 'Generate count',
         statusText: 'Generated 300 blocks.',
         settingsLabel: 'Settings',
+        helpTitle: 'How to use',
+        helpButtonLabel: 'How to use',
+        githubLinkLabel: 'Open GitHub repository in a new tab',
         metaLabels: ['Index', 'Cubes', 'Size', 'ID'],
         pressedLocales: ['en']
     });
@@ -910,6 +996,9 @@ test('runs the web generation flow and renders a nonblank Three.js canvas', {
     layoutState = await readLayoutState();
     assert.equal(layoutState.pageScrollsVertically, false);
     assert.equal(layoutState.canvasInsideViewport, true);
+    assert.equal(layoutState.toolbarInsideViewport, true);
+    assert.equal(layoutState.toolbarDoesNotOverlapCanvas, true);
+    assert.equal(layoutState.toolbarDirection, 'column');
     assert.equal(layoutState.canvasWidth, layoutState.canvasHeight);
 
     await page.click('#settingsToggleButton');
@@ -918,6 +1007,7 @@ test('runs the web generation flow and renders a nonblank Three.js canvas', {
     assert.equal(layoutState.toggleExpanded, 'false');
     assert.equal(layoutState.toggleLabel, 'Show settings');
     assert.equal(layoutState.canvasInsideViewport, true);
+    assert.equal(layoutState.toolbarDoesNotOverlapCanvas, true);
 
     await page.screenshot({
         path: path.join(os.tmpdir(), 'block-generator-web-mobile-smoke.png'),

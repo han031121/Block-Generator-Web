@@ -38,6 +38,9 @@ const prevButton = document.querySelector('#prevButton');
 const nextButton = document.querySelector('#nextButton');
 const downloadButton = document.querySelector('#downloadButton');
 const resetRenderButton = document.querySelector('#resetRenderButton');
+const helpButton = document.querySelector('#helpButton');
+const helpDialog = document.querySelector('#helpDialog');
+const helpCloseButton = document.querySelector('#helpCloseButton');
 const languageSwitcher = document.querySelector('#languageSwitcher');
 const languageMenuButton = document.querySelector('#languageMenuButton');
 const languageMenu = document.querySelector('#languageMenu');
@@ -727,6 +730,26 @@ function bindLanguageEvents() {
     });
 }
 
+function bindHelpEvents() {
+    helpButton.addEventListener('click', () => {
+        setLanguageMenuOpen(false);
+        if (!helpDialog.open) {
+            helpDialog.showModal();
+        }
+    });
+    helpCloseButton.addEventListener('click', () => {
+        helpDialog.close();
+    });
+    helpDialog.addEventListener('click', (event) => {
+        if (event.target === helpDialog) {
+            helpDialog.close();
+        }
+    });
+    helpDialog.addEventListener('close', () => {
+        helpButton.focus({ preventScroll: true });
+    });
+}
+
 function bindRenderEvents() {
     resetRenderButton.addEventListener('click', resetRenderOptions);
 
@@ -779,7 +802,7 @@ function hasShortcutModifier(event) {
 
 function bindKeyboardShortcuts() {
     document.addEventListener('keydown', (event) => {
-        if (event.defaultPrevented || isEditingText(event.target)) {
+        if (event.defaultPrevented || helpDialog.open || isEditingText(event.target)) {
             return;
         }
 
@@ -880,6 +903,7 @@ function bindCanvasInteractionEvents() {
 bindSettingsShellEvents();
 setSettingsPanelOpen(true);
 bindLanguageEvents();
+bindHelpEvents();
 applyLocale();
 bindGeneratorEvents();
 bindRenderEvents();

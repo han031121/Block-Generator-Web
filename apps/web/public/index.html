@@ -314,64 +314,170 @@
         </section>
 
         <div
-            id="languageSwitcher"
-            class="language-switcher"
+            id="utilityToolbar"
+            class="utility-toolbar"
+            role="toolbar"
+            aria-label="Quick tools"
+            data-i18n-aria-label="utilities.label"
+            aria-orientation="vertical"
         >
             <button
-                id="languageMenuButton"
-                class="language-menu-button secondary"
+                id="helpButton"
+                class="utility-action secondary"
                 type="button"
-                aria-label="Language"
-                data-i18n-aria-label="language.selector"
-                title="Language"
-                data-i18n-title="language.selector"
-                aria-haspopup="menu"
-                aria-controls="languageMenu"
-                aria-expanded="false"
+                aria-label="How to use"
+                data-i18n-aria-label="help.open"
+                title="How to use"
+                data-i18n-title="help.open"
+                aria-haspopup="dialog"
+                aria-controls="helpDialog"
             >
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                     <circle cx="12" cy="12" r="9"></circle>
-                    <path d="M3 12h18"></path>
-                    <path d="M12 3c2.3 2.5 3.5 5.5 3.5 9s-1.2 6.5-3.5 9"></path>
-                    <path d="M12 3c-2.3 2.5-3.5 5.5-3.5 9s1.2 6.5 3.5 9"></path>
+                    <path d="M9.7 9a2.4 2.4 0 1 1 3.8 1.95c-.9.64-1.5 1.05-1.5 2.05"></path>
+                    <path d="M12 17h.01"></path>
                 </svg>
             </button>
+            <a
+                id="githubLink"
+                class="utility-action secondary"
+                href="https://github.com/han031121/Block-Generator-Web"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Open GitHub repository in a new tab"
+                data-i18n-aria-label="utilities.github"
+                title="GitHub repository"
+                data-i18n-title="utilities.githubTitle"
+            >
+                <svg class="github-mark" viewBox="0 0 16 16" aria-hidden="true">
+                    <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82A7.65 7.65 0 0 1 8 3.42a7.65 7.65 0 0 1 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"></path>
+                </svg>
+            </a>
             <div
-                id="languageMenu"
-                class="language-menu"
-                role="menu"
-                aria-labelledby="languageMenuButton"
-                hidden
+                id="languageSwitcher"
+                class="language-switcher"
             >
                 <button
-                    class="language-button"
+                    id="languageMenuButton"
+                    class="utility-action language-menu-button secondary"
                     type="button"
-                    role="menuitemradio"
-                    lang="en"
-                    data-locale="en"
-                    data-i18n-title="language.english"
-                    title="English"
-                >EN</button>
-                <button
-                    class="language-button"
-                    type="button"
-                    role="menuitemradio"
-                    lang="ko"
-                    data-locale="ko"
-                    data-i18n-title="language.korean"
-                    title="Korean"
-                >한국어</button>
-                <button
-                    class="language-button"
-                    type="button"
-                    role="menuitemradio"
-                    lang="ja"
-                    data-locale="ja"
-                    data-i18n-title="language.japanese"
-                    title="Japanese"
-                >日本語</button>
+                    aria-label="Language"
+                    data-i18n-aria-label="language.selector"
+                    title="Language"
+                    data-i18n-title="language.selector"
+                    aria-haspopup="menu"
+                    aria-controls="languageMenu"
+                    aria-expanded="false"
+                >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="12" cy="12" r="9"></circle>
+                        <path d="M3 12h18"></path>
+                        <path d="M12 3c2.3 2.5 3.5 5.5 3.5 9s-1.2 6.5-3.5 9"></path>
+                        <path d="M12 3c-2.3 2.5-3.5 5.5-3.5 9s1.2 6.5 3.5 9"></path>
+                    </svg>
+                </button>
+                <div
+                    id="languageMenu"
+                    class="language-menu"
+                    role="menu"
+                    aria-labelledby="languageMenuButton"
+                    hidden
+                >
+                    <button
+                        class="language-button"
+                        type="button"
+                        role="menuitemradio"
+                        lang="en"
+                        data-locale="en"
+                        data-i18n-title="language.english"
+                        title="English"
+                    >English</button>
+                    <button
+                        class="language-button"
+                        type="button"
+                        role="menuitemradio"
+                        lang="ko"
+                        data-locale="ko"
+                        data-i18n-title="language.korean"
+                        title="Korean"
+                    >한국어</button>
+                    <button
+                        class="language-button"
+                        type="button"
+                        role="menuitemradio"
+                        lang="ja"
+                        data-locale="ja"
+                        data-i18n-title="language.japanese"
+                        title="Japanese"
+                    >日本語</button>
+                </div>
             </div>
         </div>
+
+        <dialog
+            id="helpDialog"
+            class="help-dialog"
+            aria-labelledby="helpDialogTitle"
+        >
+            <div class="help-dialog-header">
+                <div>
+                    <h2 id="helpDialogTitle" data-i18n="help.title">How to use</h2>
+                </div>
+                <button
+                    id="helpCloseButton"
+                    class="help-close-button secondary"
+                    type="button"
+                    aria-label="Close help"
+                    data-i18n-aria-label="help.close"
+                    title="Close"
+                    data-i18n-title="help.close"
+                    autofocus
+                >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M6 6l12 12M18 6L6 18"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="help-dialog-content">
+                <p class="help-intro" data-i18n="help.intro">
+                    You can generate a block, adjust it to your preferred appearance, and save it as an image.
+                </p>
+                <ol class="help-steps">
+                    <li>
+                        <strong data-i18n="help.step1Title">Set generation conditions</strong>
+                        <span data-i18n="help.step1Body">
+                            Set the generation count, size, density, and other conditions, then select Start.
+                        </span>
+                    </li>
+                    <li>
+                        <strong data-i18n="help.step2Title">Browse blocks</strong>
+                        <span data-i18n="help.step2Body">
+                            Use the arrow buttons to view the generated blocks one at a time.
+                        </span>
+                    </li>
+                    <li>
+                        <strong data-i18n="help.step3Title">Adjust the view</strong>
+                        <span data-i18n="help.step3Body">
+                            In the Rendering tab, adjust the colors, camera, and lighting. Drag the block image to rotate it, and scroll to zoom in or out.
+                        </span>
+                    </li>
+                    <li>
+                        <strong data-i18n="help.step4Title">Save as JPG</strong>
+                        <span data-i18n="help.step4Body">
+                            To save the block image, select the JPG button.
+                        </span>
+                    </li>
+                </ol>
+                <section class="help-shortcuts" aria-labelledby="helpShortcutsTitle">
+                    <h3 id="helpShortcutsTitle" data-i18n="help.shortcuts">Keyboard shortcuts</h3>
+                    <div class="shortcut-list">
+                        <div><kbd>G</kbd><span data-i18n="help.generateShortcut">Generate</span></div>
+                        <div><kbd>,</kbd><kbd>.</kbd><span data-i18n="help.browseShortcut">Previous / next block</span></div>
+                        <div><kbd>S</kbd><span data-i18n="help.saveShortcut">Save JPG</span></div>
+                    </div>
+                </section>
+            </div>
+        </dialog>
     </main>
 
     <script type="module" src="./src/main.mjs"></script>

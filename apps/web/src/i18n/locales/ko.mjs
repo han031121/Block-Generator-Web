@@ -58,11 +58,34 @@ export default {
     preview: {
         label: '블록 미리보기'
     },
+    utilities: {
+        label: '빠른 도구',
+        github: '새 탭에서 GitHub 저장소 열기',
+        githubTitle: 'GitHub 저장소'
+    },
     language: {
         selector: '언어',
         english: '영어',
         korean: '한국어',
         japanese: '일본어'
+    },
+    help: {
+        open: '사용 방법',
+        close: '도움말 닫기',
+        title: '사용 방법',
+        intro: '블록을 생성하고 원하는 모습으로 조정한 뒤 이미지로 저장할 수 있습니다.',
+        step1Title: '생성 조건 설정',
+        step1Body: '생성 개수, 크기, 밀도 등의 조건을 정한 뒤 시작을 선택합니다.',
+        step2Title: '블록 둘러보기',
+        step2Body: '화살표 버튼으로 생성된 블록을 하나씩 확인합니다.',
+        step3Title: '화면 조정',
+        step3Body: '렌더링 탭에서 색상, 카메라, 조명을 조정합니다. 블록 이미지를 드래그하면 회전하고 스크롤하면 확대하거나 축소할 수 있습니다.',
+        step4Title: 'JPG로 저장',
+        step4Body: '블록 이미지를 저장하려면 JPG 버튼을 선택합니다.',
+        shortcuts: '키보드 단축키',
+        generateShortcut: '블록 생성',
+        browseShortcut: '이전 / 다음 블록',
+        saveShortcut: 'JPG 저장'
     },
     status: {
         ready: '준비됨',

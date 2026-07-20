@@ -10,6 +10,8 @@ import {
 } from './renderConfig.mjs';
 
 const MIN_AUTO_FIT_CLUSTER_SIZE = 3;
+const EDGE_THICKNESS_REFERENCE_VIEW_SIZE = Math.sqrt(3) *
+    MIN_AUTO_FIT_CLUSTER_SIZE * DEFAULT_RENDER_OPTIONS.fitScale;
 
 function degreesToRadians(degrees) {
     return degrees * Math.PI / 180;
@@ -17,6 +19,34 @@ function degreesToRadians(degrees) {
 
 function getMinimumAutoFitBaseSize(fitScale) {
     return Math.sqrt(3) * MIN_AUTO_FIT_CLUSTER_SIZE * fitScale;
+}
+
+function getScaledEdgeThickness(edgeThickness, camera) {
+    const viewSize = camera.top - camera.bottom;
+    if (!Number.isFinite(viewSize) || viewSize <= 0) {
+        return edgeThickness;
+    }
+
+    return edgeThickness * EDGE_THICKNESS_REFERENCE_VIEW_SIZE / viewSize;
+}
+
+function getBoundsDepthRange(bounds, target, viewDirection) {
+    if (bounds.isEmpty()) {
+        return { front: 0, back: 0 };
+    }
+
+    const centerOffset = bounds.getCenter(new THREE.Vector3()).sub(target);
+    const halfSize = bounds.getSize(new THREE.Vector3()).multiplyScalar(0.5);
+    const centerDepth = centerOffset.dot(viewDirection);
+    const halfDepth =
+        Math.abs(viewDirection.x) * halfSize.x +
+        Math.abs(viewDirection.y) * halfSize.y +
+        Math.abs(viewDirection.z) * halfSize.z;
+
+    return {
+        front: centerDepth + halfDepth,
+        back: centerDepth - halfDepth
+    };
 }
 
 function offsetFromAngles(distance, azimuthDeg, elevationDeg) {
@@ -350,7 +380,7 @@ export class ThreeBlockRenderer {
 
         const edgeMaterial = new LineMaterial({
             color: this.options.edgeColor,
-            linewidth: this.options.edgeThickness,
+            linewidth: getScaledEdgeThickness(this.options.edgeThickness, this.camera),
             worldUnits: false
         });
         this.edgeMaterial = edgeMaterial;
@@ -377,7 +407,10 @@ export class ThreeBlockRenderer {
         }
 
         this.edgeMaterial.color.set(this.options.edgeColor);
-        this.edgeMaterial.linewidth = this.options.edgeThickness;
+        this.edgeMaterial.linewidth = getScaledEdgeThickness(
+            this.options.edgeThickness,
+            this.camera
+        );
         this.edgeMaterial.resolution.set(IMAGE_SIZE, IMAGE_SIZE);
     }
 
@@ -409,18 +442,28 @@ export class ThreeBlockRenderer {
             DEFAULT_RENDER_OPTIONS.cameraDistance;
         const viewSize = Math.max(baseSize * distanceScale, 1);
         const halfView = viewSize / 2;
+        const viewDirection = offsetFromAngles(
+            1,
+            this.options.cameraAzimuthDeg,
+            this.options.cameraElevationDeg
+        );
+        const depthRange = getBoundsDepthRange(bounds, target, viewDirection);
+        const cameraPositionDistance = Math.max(
+            this.options.cameraDistance,
+            depthRange.front + this.options.cameraDistance
+        );
+        const farthestSurfaceDistance = cameraPositionDistance - depthRange.back;
 
         this.camera.left = -halfView;
         this.camera.right = halfView;
         this.camera.top = halfView;
         this.camera.bottom = -halfView;
         this.camera.near = 0.1;
-        this.camera.far = Math.max(100, this.options.cameraDistance * 8 + sphere.radius * 4);
-        this.camera.position.copy(target).add(offsetFromAngles(
-            this.options.cameraDistance,
-            this.options.cameraAzimuthDeg,
-            this.options.cameraElevationDeg
-        ));
+        this.camera.far = Math.max(100, farthestSurfaceDistance + 1);
+        this.camera.position.copy(target).addScaledVector(
+            viewDirection,
+            cameraPositionDistance
+        );
         this.camera.lookAt(target);
         this.camera.updateProjectionMatrix();
         this.camera.updateMatrixWorld();
