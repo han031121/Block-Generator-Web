@@ -94,6 +94,26 @@ test('runs the web generation flow and renders a nonblank Three.js canvas', {
     assert.equal(layoutState.toolbarDirection, 'column');
     assert.equal(layoutState.canvasWidth, layoutState.canvasHeight);
 
+    const utilityActionStyles = await page.$$eval('.utility-action', (actions) =>
+        actions.map((action) => {
+            const style = getComputedStyle(action);
+            return {
+                borderColor: style.borderColor,
+                borderStyle: style.borderStyle,
+                borderWidth: style.borderWidth,
+                backgroundColor: style.backgroundColor,
+                color: style.color
+            };
+        })
+    );
+    assert.deepEqual(utilityActionStyles, Array(3).fill({
+        borderColor: 'rgb(119, 135, 129)',
+        borderStyle: 'solid',
+        borderWidth: '1px',
+        backgroundColor: 'rgb(255, 255, 255)',
+        color: 'rgb(36, 52, 47)'
+    }));
+
     let languageState = await page.evaluate(() => {
         const switcher = document.querySelector('#languageSwitcher');
         const toolbar = document.querySelector('#utilityToolbar');
