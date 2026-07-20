@@ -10,6 +10,8 @@ import {
 } from './renderConfig.mjs';
 
 const MIN_AUTO_FIT_CLUSTER_SIZE = 3;
+const EDGE_THICKNESS_REFERENCE_VIEW_SIZE = Math.sqrt(3) *
+    MIN_AUTO_FIT_CLUSTER_SIZE * DEFAULT_RENDER_OPTIONS.fitScale;
 
 function degreesToRadians(degrees) {
     return degrees * Math.PI / 180;
@@ -17,6 +19,15 @@ function degreesToRadians(degrees) {
 
 function getMinimumAutoFitBaseSize(fitScale) {
     return Math.sqrt(3) * MIN_AUTO_FIT_CLUSTER_SIZE * fitScale;
+}
+
+function getScaledEdgeThickness(edgeThickness, camera) {
+    const viewSize = camera.top - camera.bottom;
+    if (!Number.isFinite(viewSize) || viewSize <= 0) {
+        return edgeThickness;
+    }
+
+    return edgeThickness * EDGE_THICKNESS_REFERENCE_VIEW_SIZE / viewSize;
 }
 
 function getBoundsDepthRange(bounds, target, viewDirection) {
@@ -369,7 +380,7 @@ export class ThreeBlockRenderer {
 
         const edgeMaterial = new LineMaterial({
             color: this.options.edgeColor,
-            linewidth: this.options.edgeThickness,
+            linewidth: getScaledEdgeThickness(this.options.edgeThickness, this.camera),
             worldUnits: false
         });
         this.edgeMaterial = edgeMaterial;
@@ -396,7 +407,10 @@ export class ThreeBlockRenderer {
         }
 
         this.edgeMaterial.color.set(this.options.edgeColor);
-        this.edgeMaterial.linewidth = this.options.edgeThickness;
+        this.edgeMaterial.linewidth = getScaledEdgeThickness(
+            this.options.edgeThickness,
+            this.camera
+        );
         this.edgeMaterial.resolution.set(IMAGE_SIZE, IMAGE_SIZE);
     }
 

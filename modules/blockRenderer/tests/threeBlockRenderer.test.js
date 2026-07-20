@@ -29,7 +29,19 @@ async function createCameraFixture({
     };
 
     ThreeBlockRenderer.prototype.updateCamera.call(fixture, target);
-    return { fixture, target, DEFAULT_RENDER_OPTIONS };
+    return { fixture, target, DEFAULT_RENDER_OPTIONS, ThreeBlockRenderer };
+}
+
+function updateEdgeThickness(fixture, ThreeBlockRenderer, edgeThickness) {
+    fixture.options.edgeThickness = edgeThickness;
+    fixture.edgeMaterial = {
+        color: { set() {} },
+        linewidth: 0,
+        resolution: { set() {} }
+    };
+
+    ThreeBlockRenderer.prototype.updateEdgeMaterial.call(fixture);
+    return fixture.edgeMaterial.linewidth;
 }
 
 function getSurfaceDistances(fixture, target) {
@@ -91,4 +103,38 @@ test('keeps an off-center target and the full block in front of the camera', asy
     assert.ok(surfaceDistances.nearest >= cameraDistance - 1e-10);
     assert.ok(surfaceDistances.nearest > fixture.camera.near);
     assert.ok(surfaceDistances.farthest < fixture.camera.far);
+});
+
+test('scales edge thickness with the rendered size of each cube', async () => {
+    const small = await createCameraFixture({ size: [3, 3, 3] });
+    const large = await createCameraFixture({ size: [13, 13, 13] });
+    const zoomedLarge = await createCameraFixture({
+        size: [13, 13, 13],
+        cameraDistance: 6
+    });
+    const smallWidth = updateEdgeThickness(
+        small.fixture,
+        small.ThreeBlockRenderer,
+        4
+    );
+    const largeWidth = updateEdgeThickness(
+        large.fixture,
+        large.ThreeBlockRenderer,
+        4
+    );
+    const adjustedLargeWidth = updateEdgeThickness(
+        large.fixture,
+        large.ThreeBlockRenderer,
+        8
+    );
+    const zoomedLargeWidth = updateEdgeThickness(
+        zoomedLarge.fixture,
+        zoomedLarge.ThreeBlockRenderer,
+        4
+    );
+
+    assert.ok(Math.abs(smallWidth - 4) < 1e-10);
+    assert.ok(Math.abs(largeWidth - 4 * 3 / 13) < 1e-10);
+    assert.ok(Math.abs(adjustedLargeWidth - largeWidth * 2) < 1e-10);
+    assert.ok(Math.abs(zoomedLargeWidth - largeWidth * 2) < 1e-10);
 });
