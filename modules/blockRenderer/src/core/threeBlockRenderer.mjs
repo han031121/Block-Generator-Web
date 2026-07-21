@@ -12,6 +12,7 @@ import {
 const MIN_AUTO_FIT_CLUSTER_SIZE = 3;
 const EDGE_THICKNESS_REFERENCE_VIEW_SIZE = Math.sqrt(3) *
     MIN_AUTO_FIT_CLUSTER_SIZE * DEFAULT_RENDER_OPTIONS.fitScale;
+const EDGE_DEPTH_OFFSET_PADDING = 1.3;
 
 function degreesToRadians(degrees) {
     return degrees * Math.PI / 180;
@@ -28,6 +29,17 @@ function getScaledEdgeThickness(edgeThickness, camera) {
     }
 
     return edgeThickness * EDGE_THICKNESS_REFERENCE_VIEW_SIZE / viewSize;
+}
+
+function getEdgeDepthOffset(edgeThickness) {
+    // Screen-space strokes need a matching world-space depth bias so nearby
+    // faces do not clip their expanded pixels. Preserve the old bias minimum.
+    const safeEdgeThickness = Number.isFinite(edgeThickness)
+        ? Math.max(edgeThickness, DEFAULT_RENDER_OPTIONS.edgeThickness)
+        : DEFAULT_RENDER_OPTIONS.edgeThickness;
+
+    return safeEdgeThickness * EDGE_THICKNESS_REFERENCE_VIEW_SIZE /
+        (2 * IMAGE_SIZE) * EDGE_DEPTH_OFFSET_PADDING;
 }
 
 function getBoundsDepthRange(bounds, target, viewDirection) {
@@ -176,7 +188,7 @@ function getBlockTarget(block) {
         : getFallbackCenter(block.cubes);
 }
 
-function addEdge(edges, edgeSet, start, end, offset) {
+function addEdge(edges, edgeSet, start, end) {
     const key = edgeKey(start, end);
     if (edgeSet.has(key)) {
         return;
@@ -184,12 +196,12 @@ function addEdge(edges, edgeSet, start, end, offset) {
 
     edgeSet.add(key);
     edges.push(
-        start.x + offset.x,
-        start.y + offset.y,
-        start.z + offset.z,
-        end.x + offset.x,
-        end.y + offset.y,
-        end.z + offset.z
+        start.x,
+        start.y,
+        start.z,
+        end.x,
+        end.y,
+        end.z
     );
 }
 
@@ -234,7 +246,6 @@ function buildVisibleEdgePositions(block, viewDirection) {
     const cubeSet = new Set(block.cubes.map((cube) => cubeKey(cube.r, cube.c, cube.h)));
     const edges = [];
     const edgeSet = new Set();
-    const offset = viewDirection.clone().multiplyScalar(0.015);
     const faces = [
         { axis: 'x', sign: 1, delta: { r: 0, c: 1, h: 0 }, normal: new THREE.Vector3(1, 0, 0) },
         { axis: 'x', sign: -1, delta: { r: 0, c: -1, h: 0 }, normal: new THREE.Vector3(-1, 0, 0) },
@@ -260,10 +271,10 @@ function buildVisibleEdgePositions(block, viewDirection) {
             }
 
             const corners = getFaceCorners(cube, face.axis, face.sign);
-            addEdge(edges, edgeSet, corners[0], corners[1], offset);
-            addEdge(edges, edgeSet, corners[1], corners[2], offset);
-            addEdge(edges, edgeSet, corners[2], corners[3], offset);
-            addEdge(edges, edgeSet, corners[3], corners[0], offset);
+            addEdge(edges, edgeSet, corners[0], corners[1]);
+            addEdge(edges, edgeSet, corners[1], corners[2]);
+            addEdge(edges, edgeSet, corners[2], corners[3]);
+            addEdge(edges, edgeSet, corners[3], corners[0]);
         }
     }
 
@@ -389,6 +400,10 @@ export class ThreeBlockRenderer {
         edgeMaterial.resolution.set(IMAGE_SIZE, IMAGE_SIZE);
 
         const edgeOverlay = new LineSegments2(lineGeometry, edgeMaterial);
+        edgeOverlay.userData.viewDirection = viewDirection;
+        edgeOverlay.position.copy(viewDirection).multiplyScalar(
+            getEdgeDepthOffset(this.options.edgeThickness)
+        );
         edgeOverlay.renderOrder = 10;
         return edgeOverlay;
     }
@@ -412,6 +427,12 @@ export class ThreeBlockRenderer {
             this.camera
         );
         this.edgeMaterial.resolution.set(IMAGE_SIZE, IMAGE_SIZE);
+
+        if (this.edgeOverlay?.userData.viewDirection) {
+            this.edgeOverlay.position
+                .copy(this.edgeOverlay.userData.viewDirection)
+                .multiplyScalar(getEdgeDepthOffset(this.options.edgeThickness));
+        }
     }
 
     updateEdgeOverlay(block, target, forceRebuild = false) {

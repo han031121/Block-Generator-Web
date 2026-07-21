@@ -138,3 +138,38 @@ test('scales edge thickness with the rendered size of each cube', async () => {
     assert.ok(Math.abs(adjustedLargeWidth - largeWidth * 2) < 1e-10);
     assert.ok(Math.abs(zoomedLargeWidth - largeWidth * 2) < 1e-10);
 });
+
+test('moves thick edge overlays forward without disabling depth testing', async () => {
+    const {
+        fixture,
+        target,
+        ThreeBlockRenderer
+    } = await createCameraFixture({ size: [3, 3, 3] });
+    const block = {
+        index: 0,
+        size: { r: 1, c: 1, h: 1 },
+        center: { r: 0, c: 0, h: 0 },
+        cubes: [{ r: 0, c: 0, h: 0 }]
+    };
+    const edgeOverlay = ThreeBlockRenderer.prototype.createEdgeOverlay.call(
+        fixture,
+        block,
+        target
+    );
+    fixture.edgeOverlay = edgeOverlay;
+    const edgeMaterial = fixture.edgeMaterial;
+    const defaultOffset = edgeOverlay.position.length();
+
+    fixture.options.edgeThickness = 12;
+    ThreeBlockRenderer.prototype.updateEdgeMaterial.call(fixture);
+
+    assert.equal(fixture.edgeOverlay, edgeOverlay);
+    assert.equal(fixture.edgeMaterial, edgeMaterial);
+    assert.equal(edgeMaterial.depthTest, true);
+    assert.equal(edgeMaterial.depthWrite, false);
+    assert.ok(defaultOffset > 0);
+    assert.ok(Math.abs(edgeOverlay.position.length() - defaultOffset * 3) < 1e-10);
+
+    edgeOverlay.geometry.dispose();
+    edgeMaterial.dispose();
+});
